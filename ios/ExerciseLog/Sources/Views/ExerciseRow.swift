@@ -14,6 +14,7 @@ struct ExerciseRow: View {
     @State private var loggingNew = false
     @State private var editingProgression = false
     @State private var progressionDraft = ""
+    @State private var showProgress = false
 
     private static let minSlots = 5
 
@@ -22,6 +23,7 @@ struct ExerciseRow: View {
     }
     private var weekTotal: Int { store.week(weekOf)?.totalSets(for: exercise.id) ?? 0 }
     private var progression: String { store.progression(weekOf: weekOf, exerciseID: exercise.id) }
+    private var readyToProgress: Bool { store.week(weekOf)?.readyToProgress(exercise) ?? false }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -46,9 +48,23 @@ struct ExerciseRow: View {
                     Text("\(weekTotal)/\(exercise.weeklySets)")
                         .font(.subheadline.monospacedDigit().weight(.semibold))
                         .foregroundStyle(weekTotal >= exercise.weeklySets ? Theme.primary : Theme.onSurface)
-                    Text("rest \(RestTimer.format(exercise.restSeconds))")
+                    Text("\(exercise.repMin)-\(exercise.repMax) reps · rest \(RestTimer.format(exercise.restSeconds))")
                         .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
                 }
+            }
+
+            if readyToProgress {
+                Button { showProgress = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.right").font(.caption.weight(.bold))
+                        Text("Hit 3×\(exercise.repMax). Progress?").font(.caption.weight(.semibold))
+                        Spacer()
+                    }
+                    .foregroundStyle(Theme.onTertiaryContainer)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Theme.tertiaryContainer)
+                }
+                .buttonStyle(.plain)
             }
 
             HStack(spacing: 6) {
@@ -89,6 +105,13 @@ struct ExerciseRow: View {
                 } onDelete: {
                     store.deleteSet(weekOf: weekOf, day: day, exerciseID: exercise.id, index: index)
                 }
+            }
+        }
+        .sheet(isPresented: $showProgress) {
+            ProgressSheet(exercise: exercise, current: progression) { next in
+                store.setProgression(weekOf: weekOf, exerciseID: exercise.id, text: next, advanced: true)
+            } onSnooze: {
+                store.snoozeProgression(weekOf: weekOf, exerciseID: exercise.id)
             }
         }
         .alert("Progression", isPresented: $editingProgression) {
@@ -162,6 +185,67 @@ struct ExerciseRow: View {
         } else {
             Rectangle().fill(Color.clear).frame(width: 44, height: 40).hairline()
         }
+    }
+}
+
+/// Offered when three sets in a session reach the ceiling: the next rung of
+/// the ladder or the current load plus the step, editable before saving.
+struct ProgressSheet: View {
+    let exercise: Exercise
+    let current: String
+    var onProgress: (String) -> Void
+    var onSnooze: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var next = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(exercise.name).font(.headline)
+            Text("Three sets at \(exercise.repMax) reps. Move up so the first set lands near \(exercise.repMin).")
+                .font(.subheadline).foregroundStyle(Theme.onSurfaceVariant)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("NOW").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
+                Text(current.isEmpty ? "(none)" : current).font(.body)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("NEXT").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
+                TextField("e.g. 102.5kg chest press", text: $next)
+                    .textFieldStyle(.plain).padding(10).hairline()
+            }
+            if !exercise.ladder.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("LADDER").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
+                    ForEach(exercise.ladder, id: \.self) { rung in
+                        Button { next = rung } label: {
+                            HStack {
+                                Text(rung).font(.subheadline)
+                                Spacer()
+                                if rung.caseInsensitiveCompare(current) == .orderedSame {
+                                    Text("now").font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                                }
+                            }
+                            .padding(8)
+                            .background(rung == next ? Theme.secondaryContainer : Color.clear)
+                            .hairline()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            Button("Progress to this") {
+                let t = next.trimmingCharacters(in: .whitespaces)
+                guard !t.isEmpty else { return }
+                onProgress(t); dismiss()
+            }
+            .buttonStyle(FilledButton())
+            Button("Not yet") { onSnooze(); dismiss() }
+                .buttonStyle(OutlinedButton(tint: Theme.onSurfaceVariant))
+        }
+        .padding(20)
+        .background(Theme.surface)
+        .presentationDetents([.medium, .large])
+        .presentationCornerRadius(0)
+        .onAppear { next = exercise.suggestedNext(after: current) ?? "" }
     }
 }
 

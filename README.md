@@ -19,7 +19,12 @@ the Mac for scripts to read. `bin/exercise-log` is that reader.
 
 The "Progression" column is free text (load or variant, "100kg chest press")
 and is snapshotted into each week, so the history shows what you were lifting
-then. A checkbox per exercise per day is the paper strikethrough: done for
+then. Progression is double progression: each exercise has a rep range
+(10 to 15 for the compounds, 12 to 15 for isolation work by default). When
+three sets in one session reach the ceiling, the row shows "Hit 3×15.
+Progress?" and offers the next step: the next rung of an optional ladder of
+harder forms, or the current load plus a step (2.5 by default, parsed from a
+leading number). Pick a load that puts the first set back near the floor. A checkbox per exercise per day is the paper strikethrough: done for
 today, remaining boxes crossed out. Everything on the sheet is editable in
 the app (list icon, top left).
 
@@ -84,13 +89,16 @@ whose content changed.
   "updatedAt": "2026-09-24T05:10:00.000Z",
   "exercises": [
     {"id": "horizontal-push", "name": "Horizontal Push", "weeklySets": 10,
-     "restSeconds": 180, "progression": "100kg chest press", "archived": false}
+     "restSeconds": 180, "progression": "100kg chest press", "archived": false,
+     "repMin": 10, "repMax": 15, "loadStep": 2.5,
+     "ladder": ["incline pushups", "pushups", "chest press"]}
   ],
   "weeks": [
     {
       "weekOf": "2026-09-20",
       "notes": "",
       "progressions": {"horizontal-push": "100kg chest press"},
+      "progressedAt": {"horizontal-push": "2026-09-22T17:30:00.000Z"},
       "days": [
         {"day": 1, "date": "2026-09-22",
          "entries": {
@@ -112,5 +120,10 @@ whose content changed.
 - `entries` is keyed by exercise id so readers join on it rather than on
   position. Ids are slugs of the name for the built-in rows.
 - `weeklySets` is the target for the week, summed across the three days.
+- `repMin`/`repMax` is the working range; `ladder` (optional) lists harder
+  forms in order; `loadStep` is the suggested increase when the progression
+  starts with a number. `progressedAt` records when the progression was
+  advanced (or the prompt snoozed) that week, and sets logged before it do
+  not count toward the next prompt.
 - Timestamps are ISO 8601 in UTC. The reader accepts them with or without
   fractional seconds.

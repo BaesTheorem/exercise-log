@@ -201,13 +201,22 @@ final class LogStore: ObservableObject {
         return file.exercise(exerciseID)?.progression ?? ""
     }
 
-    func setProgression(weekOf: String, exerciseID: String, text: String) {
+    func setProgression(weekOf: String, exerciseID: String, text: String, advanced: Bool = false) {
         mutate { f in
             let w = f.ensureWeek(weekOf)
             f.weeks[w].progressions[exerciseID] = text
+            if advanced { f.weeks[w].progressedAt[exerciseID] = Date() }
             if let i = f.exercises.firstIndex(where: { $0.id == exerciseID }) {
                 f.exercises[i].progression = text
             }
+        }
+    }
+
+    /// "Not yet": hide the prompt until new sets at the ceiling accumulate.
+    func snoozeProgression(weekOf: String, exerciseID: String) {
+        mutate { f in
+            let w = f.ensureWeek(weekOf)
+            f.weeks[w].progressedAt[exerciseID] = Date()
         }
     }
 

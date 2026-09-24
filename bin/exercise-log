@@ -83,6 +83,17 @@ def ordered_exercises(data: dict, week: dict) -> list[dict]:
     return out
 
 
+def ready_to_progress(week: dict, ex: dict) -> bool:
+    """Three sets at or above repMax in one session, logged after the last advance."""
+    since = week.get("progressedAt", {}).get(ex["id"], "")
+    top = ex.get("repMax", 15)
+    for d in week["days"]:
+        sets = d.get("entries", {}).get(ex["id"], {}).get("sets", [])
+        if sum(1 for s in sets if s["reps"] >= top and s.get("loggedAt", "") > since) >= 3:
+            return True
+    return False
+
+
 def week_total(week: dict, eid: str) -> int:
     return sum(len(d.get("entries", {}).get(eid, {}).get("sets", [])) for d in week["days"])
 
@@ -109,7 +120,7 @@ def fmt_rest(seconds: int) -> str:
 def week_table(data: dict, week: dict, markdown: bool) -> str:
     exs = ordered_exercises(data, week)
     days = week["days"]
-    head = ["Exercise", "Progression", "Sets"] + [f"Day {d['day']} ({d.get('date') or '-'})" for d in days]
+    head = ["Exercise", "Progression", "Range", "Sets"] + [f"Day {d['day']} ({d.get('date') or '-'})" for d in days]
     rows = []
     for e in exs:
         prog = week.get("progressions", {}).get(e["id"], e.get("progression", ""))
@@ -121,7 +132,10 @@ def week_table(data: dict, week: dict, markdown: bool) -> str:
             if entry.get("done"):
                 reps = (reps + " ✓") if reps else "✓"
             cells.append(reps)
-        rows.append([e["name"], prog, f"{total}/{e.get('weeklySets', 0)}"] + cells)
+        rng = f"{e.get('repMin', 10)}-{e.get('repMax', 15)}"
+        if ready_to_progress(week, e):
+            rng += " ↑"
+        rows.append([e["name"], prog, rng, f"{total}/{e.get('weeklySets', 0)}"] + cells)
     if markdown:
         lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
         lines += ["| " + " | ".join(r) + " |" for r in rows]
@@ -175,7 +189,7 @@ def note_for(data: dict, week: dict) -> str:
     body = [f"### Week of {week['weekOf']}", "", week_table(data, week, markdown=True), ""]
     if week.get("notes"):
         body += ["#### Notes", week["notes"], ""]
-    body.append("A trailing ✓ in a day cell is the app's done mark (no more sets that day).")
+    body.append("A trailing ✓ in a day cell is the app's done mark (no more sets that day). ↑ in Range means the progression prompt is live (three sets at the ceiling).")
     return "\n".join(fm + body) + "\n"
 
 

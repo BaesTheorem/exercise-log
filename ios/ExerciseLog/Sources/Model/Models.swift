@@ -59,6 +59,66 @@ struct Exercise: Codable, Equatable, Identifiable, Hashable {
     /// "hanging leg raises"). Snapshotted into each week.
     var progression: String
     var archived: Bool = false
+    /// Working rep range. Progress when three sets in one session reach
+    /// `repMax`; the next load should drop reps back near `repMin`.
+    var repMin: Int = 10
+    var repMax: Int = 15
+    /// Ordered harder forms to offer after the current progression, e.g.
+    /// ["incline pushups", "pushups", "decline pushups"]. Optional.
+    var ladder: [String] = []
+    /// Load increase to suggest when the progression starts with a number
+    /// ("100kg chest press" -> "102.5kg chest press"). 0 disables it.
+    var loadStep: Double = 2.5
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, weeklySets, restSeconds, progression, archived, repMin, repMax, ladder, loadStep
+    }
+
+    init(id: String, name: String, weeklySets: Int, restSeconds: Int, progression: String,
+         archived: Bool = false, repMin: Int = 10, repMax: Int = 15, ladder: [String] = [], loadStep: Double = 2.5) {
+        self.id = id; self.name = name; self.weeklySets = weeklySets; self.restSeconds = restSeconds
+        self.progression = progression; self.archived = archived; self.repMin = repMin; self.repMax = repMax
+        self.ladder = ladder; self.loadStep = loadStep
+    }
+
+    /// Older files lack the progression fields; fill defaults instead of failing.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        weeklySets = try c.decode(Int.self, forKey: .weeklySets)
+        restSeconds = try c.decode(Int.self, forKey: .restSeconds)
+        progression = try c.decodeIfPresent(String.self, forKey: .progression) ?? ""
+        archived = try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        repMin = try c.decodeIfPresent(Int.self, forKey: .repMin) ?? 10
+        repMax = try c.decodeIfPresent(Int.self, forKey: .repMax) ?? 15
+        ladder = try c.decodeIfPresent([String].self, forKey: .ladder) ?? []
+        loadStep = try c.decodeIfPresent(Double.self, forKey: .loadStep) ?? 2.5
+    }
+
+    /// What to offer when the trigger fires: the next rung of the ladder,
+    /// else the current load plus `loadStep`, else nothing automatic.
+    func suggestedNext(after current: String) -> String? {
+        if let i = ladder.firstIndex(where: { $0.caseInsensitiveCompare(current) == .orderedSame }),
+           ladder.indices.contains(i + 1) {
+            return ladder[i + 1]
+        }
+        if current.isEmpty, let first = ladder.first { return first }
+        return Exercise.bumpLoad(current, by: loadStep)
+    }
+
+    /// "100kg chest press" + 2.5 -> "102.5kg chest press". Nil when the text
+    /// does not start with a number.
+    static func bumpLoad(_ text: String, by step: Double) -> String? {
+        guard step > 0 else { return nil }
+        let scanner = Scanner(string: text)
+        scanner.charactersToBeSkipped = .whitespaces
+        guard let value = scanner.scanDouble() else { return nil }
+        let rest = String(text[scanner.currentIndex...])
+        let bumped = value + step
+        let number = bumped == bumped.rounded() ? String(Int(bumped)) : String(format: "%g", bumped)
+        return number + rest
+    }
 
     static func slug(_ name: String) -> String {
         let lowered = name.lowercased()
@@ -69,19 +129,19 @@ struct Exercise: Codable, Equatable, Identifiable, Hashable {
 
     /// The sheet as printed, top to bottom.
     static let defaults: [Exercise] = [
-        Exercise(id: "horizontal-push", name: "Horizontal Push", weeklySets: 10, restSeconds: 180, progression: ""),
-        Exercise(id: "vertical-push", name: "Vertical Push", weeklySets: 10, restSeconds: 180, progression: ""),
-        Exercise(id: "vertical-pull", name: "Vertical Pull", weeklySets: 5, restSeconds: 180, progression: ""),
-        Exercise(id: "horizontal-pull", name: "Horizontal Pull", weeklySets: 5, restSeconds: 180, progression: ""),
-        Exercise(id: "squats", name: "Squats", weeklySets: 10, restSeconds: 180, progression: ""),
-        Exercise(id: "bicep-curls", name: "Bicep Curls", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "lower-abs", name: "Lower Abs", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "upper-abs", name: "Upper Abs", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "obliques", name: "Obliques", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "tricep-extension", name: "Tricep Extension", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "side-delt-raises", name: "Side Delt Raises", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "rear-delt-raises", name: "Rear Delt Raises", weeklySets: 5, restSeconds: 60, progression: ""),
-        Exercise(id: "calves", name: "Calves", weeklySets: 10, restSeconds: 60, progression: ""),
+        Exercise(id: "horizontal-push", name: "Horizontal Push", weeklySets: 10, restSeconds: 180, progression: "", repMin: 10, repMax: 15),
+        Exercise(id: "vertical-push", name: "Vertical Push", weeklySets: 10, restSeconds: 180, progression: "", repMin: 10, repMax: 15),
+        Exercise(id: "vertical-pull", name: "Vertical Pull", weeklySets: 5, restSeconds: 180, progression: "", repMin: 10, repMax: 15),
+        Exercise(id: "horizontal-pull", name: "Horizontal Pull", weeklySets: 5, restSeconds: 180, progression: "", repMin: 10, repMax: 15),
+        Exercise(id: "squats", name: "Squats", weeklySets: 10, restSeconds: 180, progression: "", repMin: 10, repMax: 15),
+        Exercise(id: "bicep-curls", name: "Bicep Curls", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "lower-abs", name: "Lower Abs", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "upper-abs", name: "Upper Abs", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "obliques", name: "Obliques", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "tricep-extension", name: "Tricep Extension", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "side-delt-raises", name: "Side Delt Raises", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "rear-delt-raises", name: "Rear Delt Raises", weeklySets: 5, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
+        Exercise(id: "calves", name: "Calves", weeklySets: 10, restSeconds: 60, progression: "", repMin: 12, repMax: 15),
     ]
 }
 
@@ -95,6 +155,10 @@ struct Week: Codable, Equatable, Identifiable {
     /// Progression text per exercise id, as written on this page. Editing it
     /// mid-week updates the exercise's current value too.
     var progressions: [String: String] = [:]
+    /// When the progression was last advanced this week, per exercise. Sets
+    /// logged before it belong to the old load and do not count toward the
+    /// next prompt.
+    var progressedAt: [String: Date] = [:]
     var notes: String = ""
 
     var id: String { weekOf }
@@ -102,6 +166,27 @@ struct Week: Codable, Equatable, Identifiable {
     init(weekOf: String) {
         self.weekOf = weekOf
         self.days = (1...Week.daysPerWeek).map { Day(day: $0) }
+    }
+
+    enum CodingKeys: String, CodingKey { case weekOf, days, progressions, progressedAt, notes }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        weekOf = try c.decode(String.self, forKey: .weekOf)
+        days = try c.decode([Day].self, forKey: .days)
+        progressions = try c.decodeIfPresent([String: String].self, forKey: .progressions) ?? [:]
+        progressedAt = try c.decodeIfPresent([String: Date].self, forKey: .progressedAt) ?? [:]
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+    }
+
+    /// The double-progression trigger: some day this week has three or more
+    /// sets at or above the ceiling, all logged after the last progression.
+    func readyToProgress(_ ex: Exercise) -> Bool {
+        let since = progressedAt[ex.id] ?? .distantPast
+        return days.contains { d in
+            let sets = d.entries[ex.id]?.sets ?? []
+            return sets.filter { $0.loggedAt > since && $0.reps >= ex.repMax }.count >= 3
+        }
     }
 
     func totalSets(for exerciseID: String) -> Int {

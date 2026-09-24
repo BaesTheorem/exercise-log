@@ -52,6 +52,13 @@ struct ExerciseEditor: View {
         .presentationCornerRadius(0)
     }
 
+    private func ladderBinding(_ ex: Binding<Exercise>) -> Binding<String> {
+        Binding(
+            get: { ex.wrappedValue.ladder.joined(separator: ", ") },
+            set: { ex.wrappedValue.ladder = $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }
+        )
+    }
+
     private func row(_ ex: Binding<Exercise>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("Name", text: ex.name).font(.headline)
@@ -68,10 +75,28 @@ struct ExerciseEditor: View {
                 .pickerStyle(.menu)
                 .fixedSize()
             }
+            HStack(spacing: 12) {
+                Stepper(value: ex.repMin, in: 1...50) {
+                    Text("\(ex.wrappedValue.repMin) min").font(.subheadline).monospacedDigit()
+                }
+                .fixedSize()
+                Stepper(value: ex.repMax, in: 1...50) {
+                    Text("\(ex.wrappedValue.repMax) max").font(.subheadline).monospacedDigit()
+                }
+                .fixedSize()
+            }
             HStack {
                 TextField("Progression", text: ex.progression).font(.subheadline)
                 Toggle("Archived", isOn: ex.archived).labelsHidden().tint(Theme.outline)
                     .scaleEffect(0.8)
+            }
+            HStack(spacing: 8) {
+                Text("Load step").font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                TextField("2.5", value: ex.loadStep, format: .number)
+                    .keyboardType(.decimalPad).font(.subheadline).frame(width: 56)
+                    .padding(4).hairline()
+                TextField("Ladder: comma-separated harder forms", text: ladderBinding(ex))
+                    .font(.caption)
             }
         }
         .padding(.vertical, 4)
