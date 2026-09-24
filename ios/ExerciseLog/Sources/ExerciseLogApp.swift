@@ -6,6 +6,7 @@ struct ExerciseLogApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var store = LogStore()
     @StateObject private var timer = RestTimer()
+    @StateObject private var quest = QuestTimer()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -13,6 +14,7 @@ struct ExerciseLogApp: App {
             RootView()
                 .environmentObject(store)
                 .environmentObject(timer)
+                .environmentObject(quest)
                 .tint(Theme.primary)
                 .onAppear { store.sync() }
         }

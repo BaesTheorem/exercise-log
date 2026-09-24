@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Verify quest attempts against Fitbit and write the result into the log.
+
+The phone records each attempt in ``quest.sessions``; Fitbit records the run
+the watch saw. This matches the two by time, stamps a ``verification`` on
+the attempt, appends free runs the watch saw with no attempt, and rewrites
+``exercise-log.json`` with a fresh ``updatedAt`` so the app adopts it on its
+next foreground. Idempotent: run it as often as you like.
+
+    quest-verify                 # verify the last 14 days, print what changed
+    quest-verify --days 30
+    quest-verify --json          # events as JSON (for a watcher)
+    quest-verify --dry-run       # match, print, write nothing
+
+The Fitbit access token is read from ``--token-file`` / ``$FITBIT_TOKEN_FILE``
+(default: the harness's ``fitbit-mcp/.fitbit-token.json``). This never
+refreshes the token: refresh tokens are single use and the MCP server owns
+them. An expired token is exit 2, not a refresh.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "lib"))
+sys.path.insert(0, str(HERE))
+import quest as q  # noqa: E402
+
+DEFAULT_TOKEN = Path.home() / "Documents/Exobrain harness/fitbit-mcp/.fitbit-token.json"
+API = "https://api.fitbit.com/1/user/-"
+
+
+def load_token(path: Path) -> str:
+    try:
+        tok = json.loads(path.read_text())
+    except FileNotFoundError:
+        sys.exit(f"no Fitbit token at {path}; set FITBIT_TOKEN_FILE or --token-file")
+    exp = tok.get("expires_at")
+    if exp and q.parse_ts(exp) <= datetime.now(timezone.utc):
+        print(f"Fitbit token expired at {exp}; the fitbit-token job or any MCP use refreshes it", file=sys.stderr)
+        sys.exit(2)
+    return tok["access_token"]
+
+
+def fetch_activities(token: str, after: datetime) -> list[dict]:
+    out: list[dict] = []
+    url = f"{API}/activities/list.json?" + urllib.parse.urlencode(
+        {"afterDate": after.strftime("%Y-%m-%d"), "sort": "asc", "limit": 100, "offset": 0})
+    while url:
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                page = json.load(resp)
+        except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")[:300]
+            print(f"Fitbit {e.code}: {body}", file=sys.stderr)
+            sys.exit(2)
+        except (urllib.error.URLError, TimeoutError) as e:
+            print(f"Fitbit unreachable: {e}", file=sys.stderr)
+            sys.exit(2)
+        out.extend(page.get("activities", []))
+        url = page.get("pagination", {}).get("next") or None
+    return out
+
+
+def describe(ev: dict) -> str:
+    a = ev.get("activity", {})
+    km = f"{a.get('distanceKm', 0):.2f} km" if a else ""
+    if ev["type"] == "verified":
+        return f"verified week {ev['week']} day {ev['day']}: {a['activityName']}, {a['durationSeconds'] // 60} min, {km}, {ev['xp']} xp"
+    if ev["type"] == "free_run":
+        return f"free run: {a['activityName']} {a['startTime'][:10]}, {a['durationSeconds'] // 60} min, {km}, {ev['xp']} xp"
+    if ev["type"] == "level_up":
+        return f"level up: {ev['from']} -> {ev['to']} ({ev['xp']} xp)"
+    if ev["type"] == "chapter_done":
+        return f"chapter {ev['week']} done: {ev['title']}"
+    return json.dumps(ev)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--file", help="exercise-log.json (default: the app's sync folder)")
+    ap.add_argument("--token-file", default=os.environ.get("FITBIT_TOKEN_FILE", str(DEFAULT_TOKEN)))
+    ap.add_argument("--days", type=int, default=14, help="how far back to pull Fitbit activities")
+    ap.add_argument("--json", action="store_true", help="print the events as JSON")
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+
+    # The reader owns file discovery; borrow it rather than duplicate the paths.
+    import importlib.machinery
+    import importlib.util
+    spec = importlib.util.spec_from_loader("exercise_log", importlib.machinery.SourceFileLoader("exercise_log", str(HERE / "exercise-log")))
+    reader = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(reader)
+    path = reader.locate(args.file)
+    data = reader.load(path)
+
+    token = load_token(Path(args.token_file).expanduser())
+    after = datetime.now(timezone.utc) - timedelta(days=args.days)
+    activities = fetch_activities(token, after)
+
+    before = json.dumps(data, sort_keys=True)
+    data, events = q.apply(data, activities)
+    changed = json.dumps(data, sort_keys=True) != before
+
+    if changed and not args.dry_run:
+        data["updatedAt"] = q.iso(datetime.now(timezone.utc))
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+        os.replace(tmp, path)
+
+    if args.json:
+        print(json.dumps({"events": events, "changed": changed, "dryRun": args.dry_run,
+                          "summary": q.summary(data["quest"]), "file": str(path)}, indent=1))
+        return
+    s = q.summary(data["quest"])
+    print(f"{len(activities)} Fitbit activities since {after:%Y-%m-%d}; level {s['level']}, {s['xp']} xp")
+    for ev in events:
+        print("  " + describe(ev))
+    if not events:
+        print("  nothing new")
+    if changed and args.dry_run:
+        print("  (dry run: not written)")
+
+
+if __name__ == "__main__":
+    main()

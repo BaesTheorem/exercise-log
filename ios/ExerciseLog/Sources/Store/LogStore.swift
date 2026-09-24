@@ -136,6 +136,52 @@ final class LogStore: ObservableObject {
         try? LogJSON.encoder.encode(file)
     }
 
+    // MARK: - Quest
+
+    var quest: QuestState { file.quest }
+
+    /// Record the attempt at the moment the timer starts, so a killed app
+    /// still leaves a trace (closed out by `closeStaleQuestSessions`).
+    func startQuestSession(week: Int, day: Int) -> String {
+        let session = QuestSession(week: week, day: day, startedAt: Date())
+        mutate { f in
+            if f.quest.startedAt == nil { f.quest.startedAt = session.startedAt }
+            f.quest.sessions.append(session)
+        }
+        return session.id
+    }
+
+    func endQuestSession(id: String, elapsed: Int, jogSeconds: Int, completed: Bool) {
+        mutate { f in
+            guard let i = f.quest.sessions.firstIndex(where: { $0.id == id }) else { return }
+            f.quest.sessions[i].endedAt = Date()
+            f.quest.sessions[i].elapsedSeconds = elapsed
+            f.quest.sessions[i].jogSecondsDone = jogSeconds
+            f.quest.sessions[i].completed = completed
+        }
+    }
+
+    /// An attempt with no end is one the app died in the middle of. Credit
+    /// the time up to the plan's length and close it.
+    func closeStaleQuestSessions() {
+        mutate { f in
+            for i in f.quest.sessions.indices where f.quest.sessions[i].endedAt == nil {
+                let s = f.quest.sessions[i]
+                guard let w = s.week, let d = s.day else { continue }
+                let plan = Plan.session(week: w, day: d)
+                let ran = Int(Date().timeIntervalSince(s.startedAt))
+                // Anything still open after twice the plan length is stale.
+                guard ran > plan.totalSeconds * 2 else { continue }
+                f.quest.sessions[i].endedAt = s.startedAt.addingTimeInterval(TimeInterval(min(ran, plan.totalSeconds)))
+                f.quest.sessions[i].elapsedSeconds = min(ran, plan.totalSeconds)
+            }
+        }
+    }
+
+    func deleteQuestSession(id: String) {
+        mutate { f in f.quest.sessions.removeAll { $0.id == id } }
+    }
+
     // MARK: - Convenience
 
     func week(_ weekOf: String) -> Week? { file.week(of: weekOf) }

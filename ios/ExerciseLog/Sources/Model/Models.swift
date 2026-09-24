@@ -16,6 +16,23 @@ struct LogFile: Codable, Equatable {
     var updatedAt: Date = Date()
     var exercises: [Exercise] = Exercise.defaults
     var weeks: [Week] = []
+    /// The running quest (Couch to 5K). See Quest.swift and `lib/quest.py`.
+    var quest: QuestState = QuestState()
+
+    enum CodingKeys: String, CodingKey { case app, schemaVersion, updatedAt, exercises, weeks, quest }
+
+    init() {}
+
+    /// Files written before the quest existed have no `quest` key.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        app = try c.decodeIfPresent(String.self, forKey: .app) ?? LogFile.appID
+        schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? LogFile.currentSchema
+        updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+        exercises = try c.decodeIfPresent([Exercise].self, forKey: .exercises) ?? Exercise.defaults
+        weeks = try c.decodeIfPresent([Week].self, forKey: .weeks) ?? []
+        quest = try c.decodeIfPresent(QuestState.self, forKey: .quest) ?? QuestState()
+    }
 
     // MARK: - Lookup
 

@@ -12,6 +12,7 @@ rest of the harness never has to parse the JSON itself.
     exercise-log json                  # the raw file
     exercise-log markdown [week]       # the week as a markdown table
     exercise-log vault [--dir DIR]     # write one note per logged week
+    exercise-log quest [--line|--json] # the running quest: level, xp, next session
 
 Resolution order for the file: ``--file``, ``$EXERCISE_LOG_JSON``, then the
 first hit among the candidate folders in ``CANDIDATES``.
@@ -26,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HOME = Path.home()
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 FILE_NAME = "exercise-log.json"
 CANDIDATES = [
     HOME / "Library/Mobile Documents/com~apple~CloudDocs/Exercise Log" / FILE_NAME,
@@ -208,6 +210,39 @@ def cmd_vault(data: dict, out_dir: Path) -> None:
     print(f"{written} note(s) written to {out_dir}")
 
 
+def cmd_quest(data: dict, line: bool, as_json: bool) -> None:
+    import quest as q
+    quest = data.get("quest") or {"plan": q.PLAN_ID, "sessions": []}
+    s = q.summary(quest)
+    if as_json:
+        json.dump(s, sys.stdout, indent=2)
+        print()
+        return
+    nxt = s["next"]
+    next_text = (f"next: week {nxt['week']} day {nxt['day']} ({nxt['title']}, "
+                 f"{nxt['totalSeconds'] // 60} min, {nxt['jogSeconds'] // 60} min jogging)") if nxt else "plan complete"
+    if line:
+        pending = f", {s['awaitingVerification']} awaiting Fitbit" if s["awaitingVerification"] else ""
+        print(f"Quest: Agility {s['level']} ({s['xp']:,} xp), {s['completedThisWeek']}/{q.DAYS_PER_WEEK} this week, {next_text}{pending}")
+        return
+    print(f"Agility level {s['level']}, {s['xp']:,} xp ({s['xpToNext']:,} to next)")
+    print(f"Plan: {s['planSessionsDone']}/{len(q.all_sessions())} sessions done, {s['planSessionsVerified']} verified by Fitbit, {s['freeRuns']} free runs")
+    print(f"This week: {s['completedThisWeek']}/{q.DAYS_PER_WEEK}; {next_text}")
+    if s["awaitingVerification"]:
+        print(f"{s['awaitingVerification']} completed session(s) awaiting Fitbit; run bin/quest-verify")
+    recent = sorted(quest.get("sessions", []), key=lambda x: x["startedAt"])[-8:]
+    if recent:
+        print("Recent:")
+    for r in recent:
+        when = q.parse_ts(r["startedAt"]).astimezone().strftime("%a %m/%d %H:%M")
+        what = f"W{r['week']}D{r['day']}" if q.is_plan(r) else "free"
+        v = r.get("verification")
+        status = ("verified" if v else "done" if r.get("completed") else
+                  "open" if not r.get("endedAt") else f"stopped at {r.get('elapsedSeconds', 0) // 60} min")
+        extra = f", {v['distanceKm']:.2f} km, {v.get('averageHeartRate', '?')} bpm" if v else ""
+        print(f"  {when}  {what:5} {status}{extra}, {q.xp_for_session(r)} xp")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--file", help="path to exercise-log.json (or its folder)")
@@ -218,6 +253,7 @@ def main() -> None:
     sub.add_parser("json")
     p = sub.add_parser("markdown"); p.add_argument("week_of", nargs="?")
     p = sub.add_parser("vault"); p.add_argument("--dir", default=os.environ.get("EXERCISE_LOG_VAULT_DIR", str(DEFAULT_VAULT_DIR)))
+    p = sub.add_parser("quest"); p.add_argument("--line", action="store_true"); p.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
     path = locate(args.file)
@@ -237,6 +273,8 @@ def main() -> None:
         cmd_weeks(data, args.n)
     elif cmd == "vault":
         cmd_vault(data, Path(args.dir).expanduser())
+    elif cmd == "quest":
+        cmd_quest(data, args.line, args.json)
 
 
 if __name__ == "__main__":

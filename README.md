@@ -1,6 +1,6 @@
 # Exercise Log
 
-A native iPhone copy of a paper training log: one page per week, three
+A native iPhone copy of a paper training log plus a Couch to 5K quest. The log: one page per week, three
 training days, reps per set, a weekly set target and a rest interval per
 exercise. Logging a set starts the rest timer, and the timer fires a
 notification so it works with the phone locked.
@@ -127,3 +127,40 @@ whose content changed.
   not count toward the next prompt.
 - Timestamps are ISO 8601 in UTC. The reader accepts them with or without
   fractional seconds.
+
+## The running quest
+
+The Quest tab is Couch to 5K as a game: nine chapters of three sessions,
+from eight 60-second jogs to thirty minutes continuous, each session
+bracketed by a five-minute walk. Finishing sessions raises an Agility level
+on the OSRS experience table; the full plan, verified, lands near level 50.
+There are no streaks. The design pays for leaving the house: finishing the
+warm-up earns 1000 xp, finishing the session 1500 more, and a Fitbit match
+1500 more plus 50 per active minute. A run Fitbit saw that was never
+started in the app still earns 500 plus active minutes.
+
+The phone runs the intervals. Cues are spoken (`AVSpeechSynthesizer`) over
+a looped silent track that keeps the audio session open in the background,
+so they arrive with the screen locked, and every boundary also fires a local
+notification. Start a Run on the watch when you start a quest.
+
+The Mac verifies. `bin/quest-verify` pulls Fitbit's activity list (token
+from `$FITBIT_TOKEN_FILE`, never refreshed here), matches each attempt to
+the activity that overlaps it most, and writes a `verification` block into
+the attempt. Bikes never match. It is idempotent, so run it whenever. The
+rules are in `lib/quest.py` and mirrored in
+`ios/ExerciseLog/Sources/Model/Quest.swift`; change both or neither.
+`tests/test_quest.py` covers them (`uv run --with pytest pytest`).
+
+```bash
+bin/exercise-log quest          # level, xp, next session, recent attempts
+bin/exercise-log quest --line   # one line for a briefing
+bin/quest-verify --dry-run      # what would match, written nowhere
+```
+
+In the JSON, `quest` holds `plan` (`c25k`), `startedAt`, and `sessions`:
+each with `id`, `week` and `day` (absent on a free run), `startedAt`,
+`endedAt`, `elapsedSeconds`, `jogSecondsDone`, `completed`, and optionally
+`verification` (`logId`, `source`, `activityName`, `startTime`,
+`durationSeconds`, `distanceKm`, `averageHeartRate`, `activeMinutes`,
+`verifiedAt`). XP and level are computed from `sessions`, never stored.
