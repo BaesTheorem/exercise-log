@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+"""Read the Exercise Log app's JSON from the Mac side.
+
+The iPhone app mirrors ``exercise-log.json`` into a folder chosen in Files.
+This finds that file (iCloud Drive, Google Drive, or an explicit path),
+prints week summaries, and can project weeks into an Obsidian folder so the
+rest of the harness never has to parse the JSON itself.
+
+    exercise-log status                # where the file is, last update, this week
+    exercise-log week [YYYY-MM-DD]     # one week, table per day
+    exercise-log weeks [-n 8]          # recent weeks, sets vs target
+    exercise-log json                  # the raw file
+    exercise-log markdown [week]       # the week as a markdown table
+    exercise-log vault [--dir DIR]     # write one note per logged week
+
+Resolution order for the file: ``--file``, ``$EXERCISE_LOG_JSON``, then the
+first hit among the candidate folders in ``CANDIDATES``.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+HOME = Path.home()
+FILE_NAME = "exercise-log.json"
+CANDIDATES = [
+    HOME / "Library/Mobile Documents/com~apple~CloudDocs/Exercise Log" / FILE_NAME,
+    HOME / "Library/Mobile Documents/com~apple~CloudDocs" / FILE_NAME,
+    HOME / "My Drive/Exercise Log" / FILE_NAME,
+    HOME / "My Drive" / FILE_NAME,
+]
+DEFAULT_VAULT_DIR = HOME / "Exobrain/Areas/Health & Fitness/Exercise Log"
+
+
+def locate(explicit: str | None) -> Path:
+    if explicit:
+        p = Path(explicit).expanduser()
+        if p.is_dir():
+            p = p / FILE_NAME
+        if not p.exists():
+            sys.exit(f"no log at {p}")
+        return p
+    env = os.environ.get("EXERCISE_LOG_JSON")
+    if env:
+        return locate(env)
+    for c in CANDIDATES:
+        if c.exists():
+            return c
+    # iCloud Drive keeps undownloaded files as .<name>.icloud placeholders.
+    for c in CANDIDATES:
+        ghost = c.with_name(f".{c.name}.icloud")
+        if ghost.exists():
+            sys.exit(f"{c} is an iCloud placeholder; open the folder in Finder to download it")
+    sys.exit("no exercise-log.json found; pick a sync folder in the app or pass --file")
+
+
+def load(path: Path) -> dict:
+    data = json.loads(path.read_text())
+    if data.get("app") != "exercise-log":
+        sys.exit(f"{path} is not an Exercise Log file")
+    return data
+
+
+def parse_ts(s: str) -> datetime:
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def exercises_by_id(data: dict) -> dict[str, dict]:
+    return {e["id"]: e for e in data.get("exercises", [])}
+
+
+def ordered_exercises(data: dict, week: dict) -> list[dict]:
+    """Active exercises in app order, plus any archived one with sets this week."""
+    by_id = exercises_by_id(data)
+    used = {eid for d in week["days"] for eid, e in d.get("entries", {}).items() if e.get("sets")}
+    out = [e for e in data.get("exercises", []) if not e.get("archived") or e["id"] in used]
+    for eid in used - {e["id"] for e in out}:
+        out.append(by_id.get(eid, {"id": eid, "name": eid, "weeklySets": 0, "restSeconds": 0}))
+    return out
+
+
+def week_total(week: dict, eid: str) -> int:
+    return sum(len(d.get("entries", {}).get(eid, {}).get("sets", [])) for d in week["days"])
+
+
+def current_week_of(data: dict) -> str | None:
+    weeks = data.get("weeks", [])
+    return weeks[-1]["weekOf"] if weeks else None
+
+
+def find_week(data: dict, week_of: str | None) -> dict | None:
+    weeks = data.get("weeks", [])
+    if week_of is None:
+        return weeks[-1] if weeks else None
+    for w in weeks:
+        if w["weekOf"] == week_of:
+            return w
+    return None
+
+
+def fmt_rest(seconds: int) -> str:
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def week_table(data: dict, week: dict, markdown: bool) -> str:
+    exs = ordered_exercises(data, week)
+    days = week["days"]
+    head = ["Exercise", "Progression", "Sets"] + [f"Day {d['day']} ({d.get('date') or '-'})" for d in days]
+    rows = []
+    for e in exs:
+        prog = week.get("progressions", {}).get(e["id"], e.get("progression", ""))
+        total = week_total(week, e["id"])
+        cells = []
+        for d in days:
+            entry = d.get("entries", {}).get(e["id"], {})
+            reps = " ".join(str(s["reps"]) for s in entry.get("sets", []))
+            if entry.get("done"):
+                reps = (reps + " ✓") if reps else "✓"
+            cells.append(reps)
+        rows.append([e["name"], prog, f"{total}/{e.get('weeklySets', 0)}"] + cells)
+    if markdown:
+        lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+        lines += ["| " + " | ".join(r) + " |" for r in rows]
+        return "\n".join(lines)
+    widths = [max(len(str(r[i])) for r in [head] + rows) for i in range(len(head))]
+    fmt = "  ".join("{:<" + str(w) + "}" for w in widths)
+    return "\n".join([fmt.format(*head)] + [fmt.format(*r) for r in rows])
+
+
+def cmd_status(data: dict, path: Path) -> None:
+    updated = parse_ts(data["updatedAt"]).astimezone()
+    age = datetime.now(timezone.utc) - parse_ts(data["updatedAt"])
+    print(f"file:      {path}")
+    print(f"updated:   {updated:%Y-%m-%d %H:%M} ({age.days}d {age.seconds // 3600}h ago)")
+    print(f"exercises: {len([e for e in data['exercises'] if not e.get('archived')])} active")
+    logged = [w for w in data.get("weeks", []) if any(e.get("sets") for d in w["days"] for e in d.get("entries", {}).values())]
+    print(f"weeks:     {len(logged)} with sets")
+    week = find_week(data, None)
+    if week:
+        print(f"\nWeek of {week['weekOf']}")
+        print(week_table(data, week, markdown=False))
+        if week.get("notes"):
+            print(f"\nnotes: {week['notes']}")
+
+
+def cmd_weeks(data: dict, n: int) -> None:
+    exs = [e for e in data["exercises"] if not e.get("archived")]
+    target = sum(e.get("weeklySets", 0) for e in exs)
+    for w in data.get("weeks", [])[-n:]:
+        done = sum(week_total(w, e["id"]) for e in exs)
+        days = sum(1 for d in w["days"] if any(e.get("sets") for e in d.get("entries", {}).values()))
+        print(f"{w['weekOf']}  {days}/3 days  {done:3d}/{target} sets")
+
+
+def note_for(data: dict, week: dict) -> str:
+    exs = ordered_exercises(data, week)
+    target = sum(e.get("weeklySets", 0) for e in exs if not e.get("archived"))
+    done = sum(week_total(week, e["id"]) for e in exs)
+    days = [d for d in week["days"] if any(e.get("sets") for e in d.get("entries", {}).values())]
+    dates = [d["date"] for d in days if d.get("date")]
+    fm = [
+        "---",
+        f"week_of: {week['weekOf']}",
+        f"days_trained: {len(days)}",
+        f"sets_done: {done}",
+        f"sets_target: {target}",
+        f"dates: [{', '.join(dates)}]",
+        "source: exercise-log app",
+        "---",
+    ]
+    body = [f"### Week of {week['weekOf']}", "", week_table(data, week, markdown=True), ""]
+    if week.get("notes"):
+        body += ["#### Notes", week["notes"], ""]
+    body.append("A trailing ✓ in a day cell is the app's done mark (no more sets that day).")
+    return "\n".join(fm + body) + "\n"
+
+
+def cmd_vault(data: dict, out_dir: Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written = 0
+    for w in data.get("weeks", []):
+        if not any(e.get("sets") for d in w["days"] for e in d.get("entries", {}).values()):
+            continue
+        p = out_dir / f"Week of {w['weekOf']}.md"
+        text = note_for(data, w)
+        if p.exists() and p.read_text() == text:
+            continue
+        p.write_text(text)
+        written += 1
+    print(f"{written} note(s) written to {out_dir}")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--file", help="path to exercise-log.json (or its folder)")
+    sub = ap.add_subparsers(dest="cmd")
+    sub.add_parser("status")
+    p = sub.add_parser("week"); p.add_argument("week_of", nargs="?")
+    p = sub.add_parser("weeks"); p.add_argument("-n", type=int, default=8)
+    sub.add_parser("json")
+    p = sub.add_parser("markdown"); p.add_argument("week_of", nargs="?")
+    p = sub.add_parser("vault"); p.add_argument("--dir", default=os.environ.get("EXERCISE_LOG_VAULT_DIR", str(DEFAULT_VAULT_DIR)))
+    args = ap.parse_args()
+
+    path = locate(args.file)
+    data = load(path)
+    cmd = args.cmd or "status"
+    if cmd == "status":
+        cmd_status(data, path)
+    elif cmd == "json":
+        json.dump(data, sys.stdout, indent=2)
+        print()
+    elif cmd in ("week", "markdown"):
+        week = find_week(data, args.week_of)
+        if not week:
+            sys.exit("no such week")
+        print(week_table(data, week, markdown=(cmd == "markdown")))
+    elif cmd == "weeks":
+        cmd_weeks(data, args.n)
+    elif cmd == "vault":
+        cmd_vault(data, Path(args.dir).expanduser())
+
+
+if __name__ == "__main__":
+    main()

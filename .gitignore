@@ -1,0 +1,14 @@
+# Generated Xcode project (regenerate with `xcodegen generate` in ios/)
+ios/ExerciseLog.xcodeproj/
+ios/build/
+ios/DerivedData/
+
+# Per-machine signing settings
+ios/Config/Signing.xcconfig
+
+# Personal data never lives here; the log JSON stays in iCloud Drive / Google Drive
+*.exercise-log.json
+exercise-log.json
+
+.DS_Store
+__pycache__/
