@@ -138,7 +138,7 @@ struct QuestSessionView: View {
                 }
             }
             Text(completed
-                 ? "End the Run on the watch. The Mac checks Fitbit within the hour and adds \(Quest.verifiedXP) xp plus active minutes when it matches."
+                 ? "If you started a Run on the watch, end it. The Mac checks Fitbit within the hour and adds \(Quest.verifiedXP) xp plus active minutes when it matches."
                  : "Everything run so far is banked. The quest stays on the map.")
                 .font(.footnote).foregroundStyle(Theme.onSurfaceVariant)
                 .multilineTextAlignment(.center)

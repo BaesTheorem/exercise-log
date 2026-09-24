@@ -142,7 +142,8 @@ started in the app still earns 500 plus active minutes.
 The phone runs the intervals. Cues are spoken (`AVSpeechSynthesizer`) over
 a looped silent track that keeps the audio session open in the background,
 so they arrive with the screen locked, and every boundary also fires a local
-notification. Start a Run on the watch when you start a quest.
+notification. Fitbit's auto-detect is enough to verify a session; starting a
+Run on the watch adds GPS distance and full active-minute credit.
 
 The Mac verifies. `bin/quest-verify` pulls Fitbit's activity list (token
 from `$FITBIT_TOKEN_FILE`, never refreshed here), matches each attempt to

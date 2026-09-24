@@ -275,7 +275,7 @@ struct QuestView: View {
             Text("How XP works").font(.subheadline.weight(.semibold))
             Text("Finish the warm-up: \(Quest.bootsOnXP). Finish the session: \(Quest.completeXP) more. Fitbit confirms it: \(Quest.verifiedXP) more, plus \(Quest.activeMinuteXP) per active minute. A run Fitbit saw that you never started here still earns \(Quest.freeRunXP) plus active minutes. Levels use the OSRS table.")
                 .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
-            Text("Start a Run on the watch when you start the quest here; the Mac matches the two by time.")
+            Text("Fitbit auto-detect is enough to verify a session. Starting a Run on the watch adds GPS distance and full active-minute credit.")
                 .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
