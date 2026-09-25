@@ -1,57 +1,49 @@
 import SwiftUI
 
-/// The rest countdown pinned above the bottom edge while a rest is running,
-/// and a one-tap "rest over" strip once it ends.
+/// Rest countdown as a stone strip: digits in yellow, a run-energy style
+/// bar that drains green to red, and a game-message line when it ends.
 struct TimerBar: View {
     @EnvironmentObject private var timer: RestTimer
 
     var body: some View {
         if timer.isRunning {
-            VStack(spacing: 0) {
-                Rectangle().fill(Theme.outlineVariant).frame(height: 1)
-                GeometryReader { geo in
-                    Rectangle()
-                        .fill(Theme.primary)
-                        .frame(width: geo.size.width * timer.progress, height: 3)
-                }
-                .frame(height: 3)
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("REST").font(.caption2.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
-                        Text(timer.label).font(.subheadline).lineLimit(1)
+            VStack(spacing: 6) {
+                HStack(spacing: 10) {
+                    SkillIcon(name: "Prayer_icon", size: 22)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Rest").rsText(16, color: RS.orange)
+                        Text(timer.label).rsSmall(16).lineLimit(1)
                     }
                     Spacer()
                     Text(RestTimer.format(timer.remaining))
-                        .font(.system(size: 34, weight: .medium, design: .monospaced))
+                        .rsText(36, bold: true, color: timer.remaining <= 10 ? RS.red : RS.yellow)
                         .monospacedDigit()
-                        .foregroundStyle(Theme.onSurface)
-                    Button("+30s") { timer.add(seconds: 30) }
-                        .buttonStyle(OutlinedButton())
-                    Button {
-                        timer.stop()
-                    } label: {
-                        Image(systemName: "xmark").font(.body.weight(.semibold))
-                            .frame(width: 36, height: 36)
-                    }
-                    .buttonStyle(OutlinedButton(tint: Theme.onSurfaceVariant))
+                    Button("+30s") { timer.add(seconds: 30) }.buttonStyle(StoneButton())
+                    Button("X") { timer.stop() }.buttonStyle(StoneButton(color: RS.red))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Theme.surfaceLow)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Rectangle().fill(RS.stoneDarker)
+                        Rectangle()
+                            .fill(timer.remaining <= 10 ? RS.red : RS.green)
+                            .frame(width: geo.size.width * (1 - timer.progress))
+                    }
+                }
+                .frame(height: 8)
+                .bevel(inset: true)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .stonePanel()
         } else if timer.justFinished {
             HStack {
-                Image(systemName: "checkmark").font(.body.weight(.bold))
-                Text("Rest over. Go.").font(.subheadline.weight(.semibold))
+                Text("Your rest is over. Next set.").rsText(16, color: RS.green)
                 Spacer()
-                Button("OK") { timer.acknowledge() }
-                    .buttonStyle(OutlinedButton(tint: Theme.onPrimaryContainer))
+                Button("OK") { timer.acknowledge() }.buttonStyle(StoneButton())
             }
-            .foregroundStyle(Theme.onPrimaryContainer)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Theme.primaryContainer)
-            .overlay(alignment: .top) { Rectangle().fill(Theme.outlineVariant).frame(height: 1) }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .stonePanel()
         }
     }
 }

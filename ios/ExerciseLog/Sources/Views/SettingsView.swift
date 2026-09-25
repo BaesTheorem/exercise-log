@@ -8,56 +8,58 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    if CloudFolderSync.isConfigured {
-                        LabeledContent("Folder", value: CloudFolderSync.displayName ?? "chosen")
-                        if let last = store.lastSync {
-                            LabeledContent("Last sync", value: last.formatted(date: .abbreviated, time: .shortened))
+            ScrollView {
+                VStack(spacing: 10) {
+                    panel("Sync") {
+                        if CloudFolderSync.isConfigured {
+                            line("Folder", CloudFolderSync.displayName ?? "chosen")
+                            if let last = store.lastSync {
+                                line("Last sync", last.formatted(date: .abbreviated, time: .shortened))
+                            }
+                            Button("Sync now") { store.sync() }.buttonStyle(StoneButton(fill: true))
+                            Button("Change folder") { showPicker = true }.buttonStyle(StoneButton(fill: true))
+                            Button("Stop syncing") { store.forgetFolder() }.buttonStyle(StoneButton(color: RS.red, fill: true))
+                        } else {
+                            Button("Choose sync folder") { showPicker = true }.buttonStyle(StoneButton(color: RS.orange, fill: true))
                         }
-                        Button("Sync now") { store.sync() }
-                        Button("Change folder") { showPicker = true }
-                        Button("Stop syncing", role: .destructive) { store.forgetFolder() }
-                    } else {
-                        Button("Choose sync folder") { showPicker = true }
+                        if let err = store.syncError {
+                            Text(err).rsSmall(16, color: RS.red)
+                        }
+                        Text("Pick a folder in iCloud Drive or Google Drive. The app keeps \(CloudFolderSync.fileName) there, and the same file appears on the Mac for MIST to read. The app's own Documents folder is also visible in Files.")
+                            .rsSmall(16, color: RS.grey)
                     }
-                    if let err = store.syncError {
-                        Text(err).font(.footnote).foregroundStyle(Theme.error)
+
+                    panel("Data") {
+                        Button("Export JSON") {
+                            guard let data = store.exportData() else { return }
+                            let url = FileManager.default.temporaryDirectory.appendingPathComponent(CloudFolderSync.fileName)
+                            try? data.write(to: url)
+                            shareURL = url
+                        }
+                        .buttonStyle(StoneButton(fill: true))
+                        line("Exercises", "\(store.file.activeExercises.count)")
+                        line("Weeks logged", "\(store.file.weeks.filter { $0.hasAnySets }.count)")
                     }
-                } header: {
-                    Text("Sync")
-                } footer: {
-                    Text("Pick a folder in iCloud Drive or Google Drive. The app keeps \(CloudFolderSync.fileName) there, and the same file appears on the Mac for MIST to read. The app's own Documents folder is also visible in Files as a fallback.")
-                }
 
-                Section("Data") {
-                    Button("Export JSON") {
-                        guard let data = store.exportData() else { return }
-                        let url = FileManager.default.temporaryDirectory.appendingPathComponent(CloudFolderSync.fileName)
-                        try? data.write(to: url)
-                        shareURL = url
+                    panel("Timer") {
+                        Button("Allow notifications") { RestTimer.requestPermission() }.buttonStyle(StoneButton(fill: true))
+                        Text("The rest timer fires a notification when it ends, so it works with the screen locked.")
+                            .rsSmall(16, color: RS.grey)
                     }
-                    LabeledContent("Exercises", value: "\(store.file.activeExercises.count)")
-                    LabeledContent("Weeks logged", value: "\(store.file.weeks.filter { $0.hasAnySets }.count)")
-                }
 
-                Section("Timer") {
-                    Button("Allow notifications") { RestTimer.requestPermission() }
-                    Text("The rest timer fires a notification when it ends, so it works with the screen locked.")
-                        .font(.footnote).foregroundStyle(Theme.onSurfaceVariant)
+                    panel("About") {
+                        line("Version", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
+                        Text("A digital copy of the paper exercise log: one page per week, three days, reps per set, weekly set targets and rest per exercise. Skinned after Old School RuneScape; fonts from RuneLite, icons from the OSRS Wiki.")
+                            .rsSmall(16, color: RS.grey)
+                    }
                 }
-
-                Section("About") {
-                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
-                    Text("A digital copy of the paper exercise log: one page per week, three days, reps per set, weekly set targets and rest per exercise.")
-                        .font(.footnote).foregroundStyle(Theme.onSurfaceVariant)
-                }
+                .padding(8)
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Settings")
+            .background(RS.darkImage().ignoresSafeArea())
+            .navigationTitle("Options")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button { dismiss() } label: { Text("Done").rsText(18) } }
             }
             .sheet(isPresented: $showPicker) {
                 FolderPicker { url in store.chooseFolder(url) }
@@ -68,6 +70,24 @@ struct SettingsView: View {
             }
         }
         .presentationCornerRadius(0)
+    }
+
+    private func panel<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).rsText(20, bold: true, color: RS.orange)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .stonePanel()
+    }
+
+    private func line(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).rsText(16, color: RS.orange)
+            Spacer()
+            Text(value).rsText(16, color: RS.white)
+        }
     }
 }
 

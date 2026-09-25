@@ -16,7 +16,7 @@ struct QuestSessionView: View {
                 running
             }
         }
-        .background(Theme.surface)
+        .background(RS.darkImage().ignoresSafeArea())
         .presentationCornerRadius(0)
     }
 
@@ -26,47 +26,47 @@ struct QuestSessionView: View {
         let seg = timer.current
         return VStack(spacing: 0) {
             HStack {
+                SkillIcon(name: "Agility_icon", size: 22)
                 if let p = timer.plan {
-                    Text("Week \(p.week), day \(p.day)").font(.subheadline.weight(.medium))
+                    Text("Week \(p.week), day \(p.day)").rsText(18, color: RS.orange)
                 }
                 Spacer()
                 Text("\(RestTimer.format(timer.elapsed)) / \(RestTimer.format(timer.total))")
-                    .font(.subheadline).monospacedDigit().foregroundStyle(Theme.onSurfaceVariant)
+                    .rsText(18, color: RS.white).monospacedDigit()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Theme.surfaceLow)
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.outlineVariant).frame(height: 1) }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .stonePanel()
 
             segmentBar
 
             Spacer()
-            VStack(spacing: 8) {
-                Text((seg?.label ?? "").uppercased())
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(foreground(for: seg?.kind))
+            VStack(spacing: 6) {
+                Text(seg?.label ?? "")
+                    .rsText(28, bold: true, color: foreground(for: seg?.kind))
                 Text(RestTimer.format(timer.segmentRemaining))
-                    .font(.system(size: 96, weight: .medium, design: .rounded))
+                    .rsText(96, bold: true, color: foreground(for: seg?.kind))
                     .monospacedDigit()
-                    .foregroundStyle(foreground(for: seg?.kind))
                 if let next = timer.next {
                     Text("Next: \(next.label.lowercased()) \(Quest.short(next.seconds))")
-                        .font(.subheadline).foregroundStyle(foreground(for: seg?.kind).opacity(0.8))
+                        .rsText(18, color: RS.white)
                 } else {
-                    Text("Last segment").font(.subheadline).foregroundStyle(foreground(for: seg?.kind).opacity(0.8))
+                    Text("Last segment").rsText(18, color: RS.white)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 40)
             .background(background(for: seg?.kind))
+            .bevel()
+            .padding(8)
             Spacer()
 
             HStack(spacing: 12) {
                 Button("Skip segment") { timer.skipSegment() }
-                    .buttonStyle(OutlinedButton())
+                    .buttonStyle(StoneButton())
                 Spacer()
                 Button("End run") { confirmStop = true }
-                    .buttonStyle(OutlinedButton(tint: Theme.error))
+                    .buttonStyle(StoneButton(color: RS.red))
             }
             .padding(16)
             .confirmationDialog("End the run early?", isPresented: $confirmStop, titleVisibility: .visible) {
@@ -84,34 +84,35 @@ struct QuestSessionView: View {
             HStack(spacing: 1) {
                 ForEach(Array(timer.segments.enumerated()), id: \.offset) { i, seg in
                     Rectangle()
-                        .fill(i < timer.currentIndex ? Theme.primary
-                              : i == timer.currentIndex ? Theme.primary.opacity(0.5)
+                        .fill(i < timer.currentIndex ? RS.green
+                              : i == timer.currentIndex ? RS.green.opacity(0.5)
                               : background(for: seg.kind))
                         .frame(width: max(2, geo.size.width * Double(seg.seconds) / Double(total)))
                 }
             }
             .overlay(alignment: .leading) {
-                Rectangle().fill(Theme.onSurface).frame(width: 2)
+                Rectangle().fill(RS.yellow).frame(width: 2)
                     .offset(x: geo.size.width * timer.progress)
             }
         }
-        .frame(height: 10)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.outlineVariant).frame(height: 1) }
+        .frame(height: 12)
+        .bevel(inset: true)
+        .padding(.horizontal, 8)
     }
 
     private func background(for kind: Segment.Kind?) -> Color {
         switch kind {
-        case .jog: return Theme.primaryContainer
-        case .walk: return Theme.secondaryContainer
-        default: return Theme.surfaceHigh
+        case .jog: return Color(hex: 0x5A2A1A)
+        case .walk: return RS.stone
+        default: return RS.stoneDark
         }
     }
 
     private func foreground(for kind: Segment.Kind?) -> Color {
         switch kind {
-        case .jog: return Theme.onPrimaryContainer
-        case .walk: return Theme.onSecondaryContainer
-        default: return Theme.onSurface
+        case .jog: return RS.orange
+        case .walk: return RS.green
+        default: return RS.yellow
         }
     }
 
@@ -121,16 +122,18 @@ struct QuestSessionView: View {
         let session = store.quest.sessions.first { $0.id == timer.sessionID }
         let xp = session.map { Quest.xp(for: $0) } ?? 0
         let completed = session?.completed ?? false
-        return VStack(spacing: 20) {
+        return VStack(spacing: 16) {
             Spacer()
-            Image(systemName: completed ? "checkmark.seal" : "flag")
-                .font(.system(size: 56)).foregroundStyle(Theme.primary)
-            Text(completed ? "Quest complete" : "Run ended").font(.title2.weight(.semibold))
-            VStack(spacing: 6) {
-                Text("+\(xp) xp").font(.system(size: 40, weight: .medium, design: .rounded)).monospacedDigit()
+            SkillIcon(name: "Agility_icon", size: 64)
+            Text(completed ? "Quest complete!" : "Run ended").rsText(32, bold: true, color: RS.orange)
+            VStack(spacing: 2) {
+                Text("+\(xp) xp").rsText(40, bold: true).monospacedDigit()
                 Text("Level \(store.quest.level), \(store.quest.xp.formatted()) xp total")
-                    .font(.subheadline).foregroundStyle(Theme.onSurfaceVariant)
+                    .rsSmall(16, color: RS.grey)
             }
+            .padding(12)
+            .parchmentPanel()
+            .onAppear { if completed { Jingle.questLevelUp() } }
             if let s = session {
                 HStack(spacing: 24) {
                     stat("Ran", RestTimer.format(s.elapsedSeconds))
@@ -140,7 +143,7 @@ struct QuestSessionView: View {
             Text(completed
                  ? "If you started a Run on the watch, end it. The Mac checks Fitbit within the hour and adds \(Quest.verifiedXP) xp plus active minutes when it matches."
                  : "Everything run so far is banked. The quest stays on the map.")
-                .font(.footnote).foregroundStyle(Theme.onSurfaceVariant)
+                .rsSmall(16, color: RS.grey)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             Spacer()
@@ -148,15 +151,15 @@ struct QuestSessionView: View {
                 timer.dismiss()
                 dismiss()
             }
-            .buttonStyle(FilledButton())
+            .buttonStyle(StoneButton(color: RS.orange, fill: true))
             .padding(16)
         }
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(label.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
-            Text(value).font(.headline).monospacedDigit()
+        VStack(spacing: 0) {
+            Text(label).rsSmall(16, color: RS.orange)
+            Text(value).rsText(22, bold: true, color: RS.white).monospacedDigit()
         }
     }
 }

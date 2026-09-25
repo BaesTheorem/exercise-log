@@ -1,7 +1,9 @@
 import SwiftUI
+import UIKit
 
 /// Two tabs: the paper log, and the running quest. The last tab opened is
-/// remembered, so a run day reopens on the quest.
+/// remembered, so a run day reopens on the quest. `simctl launch ... -tab
+/// quest` opens a tab for screenshots.
 struct RootView: View {
     @AppStorage("tab") private var tab = "log"
 

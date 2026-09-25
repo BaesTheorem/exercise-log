@@ -38,6 +38,11 @@ targets:
         # log is reachable even before a sync folder is chosen.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        UIAppFonts:
+          - runescape.ttf
+          - runescape_bold.ttf
+          - runescape_small.ttf
+        UIUserInterfaceStyle: Dark
         # The quest timer holds a silent audio loop open so jog/walk cues keep
         # arriving with the screen locked.
         UIBackgroundModes:

@@ -14,7 +14,6 @@ struct RepsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var reps: Int
     @State private var note: String
-    @FocusState private var repsFocused: Bool
 
     init(exercise: Exercise, existing: (index: Int, set: SetRecord)? = nil, setNumber: Int, suggested: Int,
          onLog: @escaping (Int, String, Bool) -> Void, onDelete: (() -> Void)? = nil) {
@@ -29,71 +28,63 @@ struct RepsSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.name).font(.headline)
-                    Text(existing == nil ? "Set \(setNumber)" : "Edit set \(setNumber)")
-                        .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                SkillIcon(name: exercise.skillIcon, size: 24)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(exercise.name).rsText(20, bold: true, color: RS.orange)
+                    Text(existing == nil ? "Set \(setNumber)" : "Edit set \(setNumber)").rsSmall(16, color: RS.grey)
                 }
                 Spacer()
-                Button { dismiss() } label: { Image(systemName: "xmark") }
-                    .buttonStyle(OutlinedButton(tint: Theme.onSurfaceVariant))
+                Button("X") { dismiss() }.buttonStyle(StoneButton(color: RS.red))
             }
 
-            HStack(spacing: 0) {
-                Button { reps = max(0, reps - 1) } label: {
-                    Image(systemName: "minus").frame(width: 56, height: 56)
-                }
-                .buttonStyle(.plain)
-                .hairline()
+            HStack(spacing: 6) {
+                Button("-") { reps = max(0, reps - 1) }.buttonStyle(StoneButton(color: RS.white))
+                    .frame(width: 60)
                 TextField("reps", value: $reps, format: .number)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
-                    .font(.system(size: 40, weight: .medium, design: .monospaced))
-                    .focused($repsFocused)
+                    .rsText(40, bold: true)
+                    .tint(RS.yellow)
                     .frame(height: 56)
                     .frame(maxWidth: .infinity)
-                    .hairline()
-                Button { reps += 1 } label: {
-                    Image(systemName: "plus").frame(width: 56, height: 56)
-                }
-                .buttonStyle(.plain)
-                .hairline()
+                    .stoneSlot()
+                Button("+") { reps += 1 }.buttonStyle(StoneButton(color: RS.white))
+                    .frame(width: 60)
             }
-            .foregroundStyle(Theme.onSurface)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach([6, 8, 10, 12, 15, 20], id: \.self) { n in
                     Button("\(n)") { reps = n }
-                        .buttonStyle(OutlinedButton(tint: reps == n ? Theme.primary : Theme.onSurfaceVariant))
+                        .buttonStyle(StoneButton(color: reps == n ? RS.green : RS.white))
                 }
             }
 
-            TextField("Note (e.g. felt heavy, 90kg on this one)", text: $note)
+            TextField("Note (felt heavy, 90kg on this one)", text: $note)
                 .textFieldStyle(.plain)
-                .padding(10)
-                .hairline()
+                .rsSmall(16)
+                .tint(RS.yellow)
+                .padding(8)
+                .stoneSlot()
 
             if existing == nil {
-                Button("Log & rest \(RestTimer.format(exercise.restSeconds))") {
-                    onLog(reps, note, true); dismiss()
-                }
-                .buttonStyle(FilledButton())
+                Button("Log & rest \(RestTimer.format(exercise.restSeconds))") { onLog(reps, note, true); dismiss() }
+                    .buttonStyle(StoneButton(color: RS.orange, fill: true))
                 Button("Log without timer") { onLog(reps, note, false); dismiss() }
-                    .buttonStyle(OutlinedButton())
+                    .buttonStyle(StoneButton(fill: true))
             } else {
                 Button("Save") { onLog(reps, note, false); dismiss() }
-                    .buttonStyle(FilledButton())
+                    .buttonStyle(StoneButton(color: RS.orange, fill: true))
                 Button("Delete set") { onDelete?(); dismiss() }
-                    .buttonStyle(OutlinedButton(tint: Theme.error))
+                    .buttonStyle(StoneButton(color: RS.red, fill: true))
             }
         }
-        .padding(20)
-        .background(Theme.surface)
-        .presentationDetents([.height(existing == nil ? 420 : 400)])
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(RS.stoneImage().ignoresSafeArea())
+        .presentationDetents([.height(existing == nil ? 440 : 420)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(0)
     }
-
 }

@@ -20,7 +20,7 @@ struct QuestView: View {
                     footer
                 }
             }
-            .background(Theme.surface)
+            .background(RS.darkImage().ignoresSafeArea())
             .navigationTitle("Quest")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -59,40 +59,40 @@ struct QuestView: View {
     private var levelHeader: some View {
         let xp = quest.xp
         let level = quest.level
-        return VStack(spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("AGILITY").font(.caption.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
-                    Text("Level \(level)").font(.system(size: 34, weight: .semibold, design: .rounded))
+        return VStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                SkillIcon(name: "Agility_icon", size: 36)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Agility").rsText(16, color: RS.orange)
+                    Text("Level \(level)").rsText(32, bold: true)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(xp.formatted()) xp").font(.headline).monospacedDigit()
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text("\(xp.formatted()) xp").rsText(18, color: RS.white).monospacedDigit()
                     if level < 99 {
                         Text("\((Quest.xp(forLevel: level + 1) - xp).formatted()) to \(level + 1)")
-                            .font(.caption).foregroundStyle(Theme.onSurfaceVariant).monospacedDigit()
+                            .rsSmall(16, color: RS.grey).monospacedDigit()
                     }
                 }
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Rectangle().fill(Theme.surfaceHigh)
-                    Rectangle().fill(Theme.primary).frame(width: geo.size.width * Quest.levelProgress(xp: xp))
+                    Rectangle().fill(RS.stoneDarker)
+                    Rectangle().fill(RS.green).frame(width: geo.size.width * Quest.levelProgress(xp: xp))
                 }
             }
             .frame(height: 8)
-            .hairline()
+            .bevel(inset: true)
             HStack {
-                Text("\(quest.completedThisWeek()) of \(Plan.daysPerWeek) quests this week")
+                Text("\(quest.completedThisWeek()) of \(Plan.daysPerWeek) quests this week").rsSmall(16, color: RS.grey)
                 Spacer()
                 let free = quest.sessions.filter { !$0.isPlan }.count
-                if free > 0 { Text("\(free) free run\(free == 1 ? "" : "s")") }
+                if free > 0 { Text("\(free) free run\(free == 1 ? "" : "s")").rsSmall(16, color: RS.cyan) }
             }
-            .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
         }
-        .padding(16)
-        .background(Theme.surfaceLow)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.outlineVariant).frame(height: 1) }
+        .padding(10)
+        .stonePanel()
+        .padding(8)
     }
 
     // MARK: - Next quest
@@ -101,40 +101,38 @@ struct QuestView: View {
     private var nextQuestCard: some View {
         if let plan = quest.next {
             let chapter = Plan.chapters[plan.week - 1]
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("NEXT QUEST").font(.caption.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
+                    Text("Next quest").rsText(16, color: RS.orange)
                     Spacer()
-                    Text("Week \(plan.week), day \(plan.day)").font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                    Text("Week \(plan.week), day \(plan.day)").rsSmall(16, color: RS.grey)
                 }
-                Text(chapter.title).font(.title3.weight(.semibold))
-                Text(plan.summary).font(.subheadline)
+                Text(chapter.title).rsText(22, bold: true)
+                Text(plan.summary).rsSmall(16)
                 HStack(spacing: 16) {
                     stat("Total", Quest.short(plan.totalSeconds))
                     stat("Jogging", Quest.short(plan.jogSeconds))
                     stat("Warm up", Quest.short(Plan.warmup.seconds))
                 }
                 lastAttemptLine
-                Button {
-                    start(plan)
-                } label: {
-                    Label("Start quest", systemImage: "figure.run")
-                }
-                .buttonStyle(FilledButton())
-                .disabled(timer.isRunning)
-            }
-            .padding(16)
-            .background(Theme.surface)
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.outlineVariant).frame(height: 1) }
-        } else {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Plan complete").font(.title3.weight(.semibold))
-                Text("Every chapter is done. Free runs still earn XP once Fitbit sees them, and any quest can be replayed from the map.")
-                    .font(.subheadline).foregroundStyle(Theme.onSurfaceVariant)
+                Button("Start quest") { start(plan) }
+                    .buttonStyle(StoneButton(color: RS.orange, fill: true))
+                    .disabled(timer.isRunning)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.outlineVariant).frame(height: 1) }
+            .padding(10)
+            .parchmentPanel()
+            .padding(.horizontal, 8)
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Quest complete!").rsText(22, bold: true, color: RS.orange)
+                Text("Every chapter is done. Free runs still earn XP once Fitbit sees them, and any quest can be replayed from the map.")
+                    .rsSmall(16, color: RS.grey)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .stonePanel()
+            .padding(.horizontal, 8)
         }
     }
 
@@ -146,26 +144,26 @@ struct QuestView: View {
                 : last.isVerified ? "verified by Fitbit"
                 : last.completed ? "done, waiting for Fitbit"
                 : "stopped at \(Quest.short(last.elapsedSeconds))"
-            Text("Last: week \(w) day \(d), \(when), \(status).")
-                .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+            Text("Last: week \(w) day \(d), \(when), \(status).").rsSmall(16, color: RS.grey)
         }
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(Theme.onSurfaceVariant)
-            Text(value).font(.subheadline.weight(.medium)).monospacedDigit()
+        VStack(alignment: .leading, spacing: 0) {
+            Text(label).rsSmall(16, color: RS.orange)
+            Text(value).rsText(18, color: RS.white).monospacedDigit()
         }
     }
 
     // MARK: - Map
 
     private var chapterMap: some View {
-        LazyVStack(spacing: 0) {
+        LazyVStack(spacing: 4) {
             ForEach(1...Plan.weeks, id: \.self) { week in
                 chapterRow(week)
             }
         }
+        .padding(8)
     }
 
     private func chapterRow(_ week: Int) -> some View {
@@ -177,17 +175,16 @@ struct QuestView: View {
             Button {
                 withAnimation(.none) { openChapter = open ? nil : week }
             } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Text("\(week)")
-                        .font(.subheadline.weight(.semibold)).monospacedDigit()
-                        .frame(width: 28, height: 28)
-                        .background(done ? Theme.primary : unlocked ? Theme.secondaryContainer : Theme.surfaceHigh)
-                        .foregroundStyle(done ? Theme.onPrimary : unlocked ? Theme.onSecondaryContainer : Theme.outline)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(chapter.title).font(.subheadline.weight(.medium))
-                            .foregroundStyle(unlocked ? Theme.onSurface : Theme.outline)
+                        .rsText(18, bold: true, color: done ? RS.green : unlocked ? RS.yellow : RS.grey)
+                        .monospacedDigit()
+                        .frame(width: 30, height: 30)
+                        .stoneSlot()
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(chapter.title).rsText(18, color: done ? RS.green : unlocked ? RS.white : RS.grey)
                         Text(Plan.session(week: week, day: 1).summary + (week >= 5 ? " and up" : ""))
-                            .font(.caption).foregroundStyle(Theme.onSurfaceVariant).lineLimit(1)
+                            .rsSmall(16, color: RS.grey).lineLimit(1)
                     }
                     Spacer()
                     HStack(spacing: 4) {
@@ -195,27 +192,29 @@ struct QuestView: View {
                             node(week: week, day: day)
                         }
                     }
-                    Image(systemName: open ? "chevron.up" : "chevron.down").font(.caption).foregroundStyle(Theme.outline)
+                    Text(open ? "-" : "+").rsText(18, color: RS.yellow)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             if open {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(unlocked ? chapter.story : "Locked. Finish the chapter before it.")
-                        .font(.subheadline).foregroundStyle(unlocked ? Theme.onSurface : Theme.outline)
+                        .font(RS.font(16)).foregroundStyle(RS.parchmentInk)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .parchmentPanel()
                     ForEach(1...Plan.daysPerWeek, id: \.self) { day in
                         dayLine(week: week, day: day, unlocked: unlocked)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 14)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
             }
-            Rectangle().fill(Theme.outlineVariant).frame(height: 1)
         }
-        .background(open ? Theme.surfaceLow : Theme.surface)
+        .stonePanel()
     }
 
     private func node(week: Int, day: Int) -> some View {
@@ -223,9 +222,9 @@ struct QuestView: View {
         let done = quest.isDone(week: week, day: day)
         let isNext = quest.next?.week == week && quest.next?.day == day
         return Rectangle()
-            .fill(verified ? Theme.primary : done ? Theme.primaryContainer : isNext ? Theme.tertiaryContainer : Color.clear)
+            .fill(verified ? RS.green : done ? RS.green.opacity(0.5) : isNext ? RS.yellow : RS.stoneDarker)
             .frame(width: 12, height: 12)
-            .hairline(done || isNext ? Theme.primary : Theme.outlineVariant)
+            .bevel(inset: true)
     }
 
     private func dayLine(week: Int, day: Int, unlocked: Bool) -> some View {
@@ -233,21 +232,20 @@ struct QuestView: View {
         let attempts = quest.sessions(week: week, day: day)
         let verified = quest.isVerified(week: week, day: day)
         let done = quest.isDone(week: week, day: day)
-        return HStack(spacing: 10) {
-            Image(systemName: verified ? "checkmark.seal.fill" : done ? "checkmark" : "circle")
-                .font(.subheadline)
-                .foregroundStyle(verified || done ? Theme.primary : Theme.outline)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Day \(day): \(plan.summary)").font(.subheadline)
-                Text(attemptText(attempts, plan: plan)).font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+        return HStack(spacing: 8) {
+            Text(verified ? "✓✓" : done ? "✓" : "·")
+                .rsText(16, bold: true, color: verified || done ? RS.green : RS.grey)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Day \(day): \(plan.summary)").rsSmall(16, color: RS.white)
+                Text(attemptText(attempts, plan: plan)).rsSmall(16, color: RS.grey)
             }
             Spacer()
             if unlocked {
                 Button(done ? "Again" : "Run") {
                     if done { confirmReplay = plan } else { start(plan) }
                 }
-                .buttonStyle(OutlinedButton())
+                .buttonStyle(StoneButton(color: done ? RS.white : RS.green))
                 .disabled(timer.isRunning)
             }
         }
@@ -272,14 +270,16 @@ struct QuestView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("How XP works").font(.subheadline.weight(.semibold))
+            Text("How XP works").rsText(18, bold: true, color: RS.orange)
             Text("Finish the warm-up: \(Quest.bootsOnXP). Finish the session: \(Quest.completeXP) more. Fitbit confirms it: \(Quest.verifiedXP) more, plus \(Quest.activeMinuteXP) per active minute. A run Fitbit saw that you never started here still earns \(Quest.freeRunXP) plus active minutes. Levels use the OSRS table.")
-                .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                .rsSmall(16, color: RS.grey)
             Text("Fitbit auto-detect is enough to verify a session. Starting a Run on the watch adds GPS distance and full active-minute credit.")
-                .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                .rsSmall(16, color: RS.grey)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(10)
+        .stonePanel()
+        .padding(8)
     }
 }
 

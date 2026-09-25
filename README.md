@@ -28,6 +28,26 @@ leading number). Pick a load that puts the first set back near the floor. A chec
 today, remaining boxes crossed out. Everything on the sheet is editable in
 the app (list icon, top left).
 
+## Look
+
+The whole app is skinned after Old School RuneScape: stone panels with
+bevelled edges, parchment dialogs, the RuneScape bitmap font with its
+one-pixel shadow, yellow labels and orange headers. Exercises are skill
+panels with the wiki's skill icons (push and arm work under Strength,
+pulls under Attack, legs under Agility, trunk under Hitpoints), the weekly
+tally is an XP bar, set boxes are inventory slots, and hitting three sets
+at the ceiling raises the level-up dialog with the Strength jingle. The
+Quest tab (Couch to 5K as the Agility skill) uses the same skin.
+
+Third-party assets, all for personal use:
+
+- Fonts `runescape.ttf`, `runescape_bold.ttf`, `runescape_small.ttf` from
+  [RuneLite](https://github.com/runelite/runelite) (BSD-2-Clause).
+- Skill icons and the level-up jingles from the
+  [OSRS Wiki](https://oldschool.runescape.wiki) (CC BY-NC-SA 3.0; the
+  underlying art and audio are Jagex's).
+- Stone and parchment tiles are generated noise, drawn here.
+
 ## Build and install
 
 ```bash

@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// The paper log tab: week header, day tabs, one skill panel per exercise.
 struct LogView: View {
     @EnvironmentObject private var store: LogStore
     @EnvironmentObject private var timer: RestTimer
@@ -13,33 +14,32 @@ struct LogView: View {
     @State private var dateDraft = Date()
 
     private var week: Week? { store.week(weekOf) }
-    private var dayDate: String? { week?.days[day - 1].date }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    LazyVStack(spacing: 6) {
                         ForEach(Array(store.file.activeExercises.enumerated()), id: \.element.id) { i, ex in
                             ExerciseRow(exercise: ex, weekOf: weekOf, day: day, striped: i % 2 == 1)
                         }
                         weekFooter
                     }
+                    .padding(8)
                 }
-                .background(Theme.surface)
                 TimerBar()
             }
-            .background(Theme.surface)
+            .background(RS.darkImage().ignoresSafeArea())
             .navigationTitle("Exercise Log")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { showEditor = true } label: { Image(systemName: "list.bullet") }
+                    Button { showEditor = true } label: { Text("Skills").rsText(18) }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: {
-                        Image(systemName: store.syncError == nil ? "gearshape" : "exclamationmark.triangle")
+                        Text(store.syncError == nil ? "Options" : "Options!").rsText(18, color: store.syncError == nil ? RS.yellow : RS.red)
                     }
                 }
             }
@@ -49,50 +49,44 @@ struct LogView: View {
         }
     }
 
+    private func go(_ delta: Int) {
+        weekOf = delta == 0 ? LogDates.weekOf() : LogDates.shift(weekOf: weekOf, by: delta)
+        day = store.suggestedDay(weekOf: weekOf)
+    }
+
     private var header: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 6) {
             HStack {
-                Button { weekOf = LogDates.shift(weekOf: weekOf, by: -1); day = store.suggestedDay(weekOf: weekOf) } label: {
-                    Image(systemName: "chevron.left").frame(width: 40, height: 40)
-                }
-                .buttonStyle(.plain)
+                Button("<") { go(-1) }.buttonStyle(StoneButton())
                 Spacer()
-                VStack(spacing: 1) {
-                    Text("Week of \(LogDates.humanWeek(weekOf))").font(.headline)
+                VStack(spacing: 0) {
+                    Text("Week of \(LogDates.humanWeek(weekOf))").rsText(22, bold: true, color: RS.orange)
                     if weekOf != LogDates.weekOf() {
-                        Button("Today") { weekOf = LogDates.weekOf(); day = store.suggestedDay(weekOf: weekOf) }
-                            .font(.caption).foregroundStyle(Theme.primary)
+                        Button("Back to this week") { go(0) }.buttonStyle(.plain).rsSmall(16, color: RS.cyan)
                     } else {
-                        Text("this week").font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                        Text("this week").rsSmall(16, color: RS.grey)
                     }
                 }
                 Spacer()
-                Button { weekOf = LogDates.shift(weekOf: weekOf, by: 1); day = store.suggestedDay(weekOf: weekOf) } label: {
-                    Image(systemName: "chevron.right").frame(width: 40, height: 40)
-                }
-                .buttonStyle(.plain)
+                Button(">") { go(1) }.buttonStyle(StoneButton())
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
 
-            HStack(spacing: 0) {
+            HStack(spacing: 4) {
                 ForEach(1...Week.daysPerWeek, id: \.self) { d in
                     let date = week?.days[d - 1].date
                     Button {
                         day = d
                     } label: {
-                        VStack(spacing: 2) {
-                            Text("Day \(d)").font(.subheadline.weight(day == d ? .semibold : .regular))
-                            Text(date.map(LogDates.humanDay) ?? "—").font(.caption2)
-                                .foregroundStyle(day == d ? Theme.onSecondaryContainer : Theme.onSurfaceVariant)
+                        VStack(spacing: 0) {
+                            Text("Day \(d)").rsText(18, bold: day == d, color: day == d ? RS.yellow : RS.white)
+                            Text(date.map(LogDates.humanDay) ?? "-").rsSmall(16, color: day == d ? RS.green : RS.grey)
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
-                        .background(day == d ? Theme.secondaryContainer : Color.clear)
-                        .foregroundStyle(day == d ? Theme.onSecondaryContainer : Theme.onSurface)
+                        .background(day == d ? RS.stoneDark : RS.stone)
+                        .bevel(inset: day == d)
                     }
                     .buttonStyle(.plain)
-                    .hairline()
                     .contextMenu {
                         Button("Set date") {
                             dateDraft = date.flatMap(LogDates.date) ?? Date()
@@ -106,23 +100,26 @@ struct LogView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-            Rectangle().fill(Theme.outlineVariant).frame(height: 1)
         }
-        .background(Theme.surfaceLow)
+        .padding(8)
+        .stonePanel()
+        .padding(.horizontal, 8)
+        .padding(.top, 8)
         .sheet(isPresented: $showDatePicker) {
-            VStack(spacing: 16) {
-                Text("Date for Day \(day)").font(.headline)
+            VStack(spacing: 12) {
+                Text("Date for Day \(day)").rsText(20, bold: true, color: RS.orange)
                 DatePicker("", selection: $dateDraft, displayedComponents: .date)
                     .datePickerStyle(.graphical)
+                    .tint(RS.yellow)
                 Button("Save") {
                     store.setDayDate(weekOf: weekOf, day: day, date: dateDraft)
                     showDatePicker = false
                 }
-                .buttonStyle(FilledButton())
+                .buttonStyle(StoneButton(color: RS.orange, fill: true))
             }
-            .padding(20)
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(RS.stoneImage().ignoresSafeArea())
             .presentationDetents([.medium, .large])
             .presentationCornerRadius(0)
         }
@@ -131,43 +128,46 @@ struct LogView: View {
     private var weekFooter: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Week notes").font(.subheadline.weight(.semibold))
+                Text("Week notes").rsText(18, bold: true, color: RS.orange)
                 Spacer()
                 Button("Edit") {
                     notesDraft = week?.notes ?? ""
                     showNotes = true
                 }
-                .buttonStyle(OutlinedButton())
+                .buttonStyle(StoneButton())
             }
             Text((week?.notes.isEmpty ?? true) ? "Nothing yet." : week!.notes)
-                .font(.subheadline)
-                .foregroundStyle((week?.notes.isEmpty ?? true) ? Theme.outline : Theme.onSurface)
+                .rsSmall(16, color: (week?.notes.isEmpty ?? true) ? RS.grey : RS.white)
             if let last = store.lastSync {
-                Text("Synced \(last.formatted(date: .omitted, time: .shortened))")
-                    .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                Text("Synced \(last.formatted(date: .omitted, time: .shortened))").rsSmall(16, color: RS.grey)
             } else if !CloudFolderSync.isConfigured {
-                Text("Not syncing. Pick a folder in settings so MIST can read this.")
-                    .font(.caption).foregroundStyle(Theme.onSurfaceVariant)
+                Text("Not syncing. Pick a folder in Options so MIST can read this.").rsSmall(16, color: RS.cyan)
             }
             if let err = store.syncError {
-                Text(err).font(.caption).foregroundStyle(Theme.error)
+                Text(err).rsSmall(16, color: RS.red)
             }
         }
-        .padding(16)
+        .padding(10)
+        .stonePanel()
         .sheet(isPresented: $showNotes) {
-            VStack(spacing: 16) {
-                Text("Week notes").font(.headline)
+            VStack(spacing: 12) {
+                Text("Week notes").rsText(20, bold: true, color: RS.orange)
                 TextEditor(text: $notesDraft)
+                    .scrollContentBackground(.hidden)
+                    .rsSmall(16)
+                    .tint(RS.yellow)
                     .frame(minHeight: 160)
                     .padding(8)
-                    .hairline()
+                    .stoneSlot()
                 Button("Save") {
                     store.setWeekNotes(weekOf: weekOf, text: notesDraft)
                     showNotes = false
                 }
-                .buttonStyle(FilledButton())
+                .buttonStyle(StoneButton(color: RS.orange, fill: true))
             }
-            .padding(20)
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(RS.stoneImage().ignoresSafeArea())
             .presentationDetents([.medium])
             .presentationCornerRadius(0)
         }

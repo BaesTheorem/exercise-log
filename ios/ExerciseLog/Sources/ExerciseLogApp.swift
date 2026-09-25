@@ -15,7 +15,8 @@ struct ExerciseLogApp: App {
                 .environmentObject(store)
                 .environmentObject(timer)
                 .environmentObject(quest)
-                .tint(Theme.primary)
+                .tint(RS.yellow)
+                .preferredColorScheme(.dark)
                 .onAppear { store.sync() }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -31,6 +32,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        RSAppearance.install()
         return true
     }
 
