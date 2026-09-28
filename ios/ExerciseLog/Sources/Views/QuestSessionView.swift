@@ -133,7 +133,7 @@ struct QuestSessionView: View {
             }
             .padding(12)
             .parchmentPanel()
-            .onAppear { if completed { Jingle.questLevelUp() } }
+            .onAppear { if completed { Jingle.fanfare() } }
             if let s = session {
                 HStack(spacing: 24) {
                     stat("Ran", RestTimer.format(s.elapsedSeconds))

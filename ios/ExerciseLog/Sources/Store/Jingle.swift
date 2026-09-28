@@ -7,10 +7,14 @@ enum Jingle {
 
     static func levelUp() { play("level_up") }
     static func questLevelUp() { play("quest_level_up") }
+    /// The game's quest-complete fanfare, from the Music folder.
+    static func fanfare() { play("Fanfare") }
 
     private static func play(_ name: String) {
         guard let url = Bundle.main.url(forResource: name, withExtension: "m4a") else { return }
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+        // Playback, not ambient: ambient would silence the music player
+        // the moment the screen locks, since the category is app-wide.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
         try? AVAudioSession.sharedInstance().setActive(true)
         player = try? AVAudioPlayer(contentsOf: url)
         player?.play()

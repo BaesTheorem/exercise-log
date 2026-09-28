@@ -136,6 +136,14 @@ final class LogStore: ObservableObject {
         try? LogJSON.encoder.encode(file)
     }
 
+    // MARK: - Avatar
+
+    var avatar: Avatar { file.avatar }
+
+    func setAvatar(_ avatar: Avatar) {
+        mutate { f in f.avatar = avatar }
+    }
+
     // MARK: - Quest
 
     var quest: QuestState { file.quest }

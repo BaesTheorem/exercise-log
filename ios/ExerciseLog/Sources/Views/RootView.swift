@@ -15,6 +15,9 @@ struct RootView: View {
             QuestView()
                 .tabItem { Label("Quest", systemImage: "figure.run") }
                 .tag("quest")
+            PlayerView()
+                .tabItem { Label("Player", systemImage: "person.fill") }
+                .tag("player")
         }
     }
 }

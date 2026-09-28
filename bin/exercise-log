@@ -155,6 +155,9 @@ def cmd_status(data: dict, path: Path) -> None:
     print(f"exercises: {len([e for e in data['exercises'] if not e.get('archived')])} active")
     logged = [w for w in data.get("weeks", []) if any(e.get("sets") for d in w["days"] for e in d.get("entries", {}).values())]
     print(f"weeks:     {len(logged)} with sets")
+    av = data.get("avatar")
+    if av:
+        print(f"player:    {av.get('name', 'Player')} ({'female' if av.get('female') else 'male'} build)")
     week = find_week(data, None)
     if week:
         print(f"\nWeek of {week['weekOf']}")

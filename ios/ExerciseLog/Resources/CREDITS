@@ -12,3 +12,9 @@ Sounds: level_up.m4a  ("Strength Level Up! (2-49).ogg")
 
 Tiles: stone_tile.png, parchment_tile.png, dark_tile.png
   Generated noise, made for this app.
+
+Music: Music/*.m4a (18 tracks: Adventure, Autumn Voyage, Barbarianism,
+  Book of Spells, Dream, Fanfare, Flute Salad, Garden, Harmony, Long Way
+  Home, Medieval, Newbie Melody, Scape Main, Sea Shanty 2, Spirit, Wander,
+  Workshop, Yesteryear)
+  OSRS Wiki, CC BY-NC-SA 3.0. Music is Jagex Ltd's. Personal use only.

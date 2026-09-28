@@ -18,8 +18,10 @@ struct LogFile: Codable, Equatable {
     var weeks: [Week] = []
     /// The running quest (Couch to 5K). See Quest.swift and `lib/quest.py`.
     var quest: QuestState = QuestState()
+    /// The player's look from the Character Design screen.
+    var avatar: Avatar = Avatar()
 
-    enum CodingKeys: String, CodingKey { case app, schemaVersion, updatedAt, exercises, weeks, quest }
+    enum CodingKeys: String, CodingKey { case app, schemaVersion, updatedAt, exercises, weeks, quest, avatar }
 
     init() {}
 
@@ -32,6 +34,7 @@ struct LogFile: Codable, Equatable {
         exercises = try c.decodeIfPresent([Exercise].self, forKey: .exercises) ?? Exercise.defaults
         weeks = try c.decodeIfPresent([Week].self, forKey: .weeks) ?? []
         quest = try c.decodeIfPresent(QuestState.self, forKey: .quest) ?? QuestState()
+        avatar = try c.decodeIfPresent(Avatar.self, forKey: .avatar) ?? Avatar()
     }
 
     // MARK: - Lookup

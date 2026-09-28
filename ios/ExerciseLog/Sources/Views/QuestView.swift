@@ -61,6 +61,7 @@ struct QuestView: View {
         let level = quest.level
         return VStack(spacing: 8) {
             HStack(alignment: .center, spacing: 12) {
+                AvatarView(avatar: store.avatar, scale: 2)
                 SkillIcon(name: "Agility_icon", size: 36)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Agility").rsText(16, color: RS.orange)

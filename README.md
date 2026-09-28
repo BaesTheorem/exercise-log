@@ -39,11 +39,23 @@ tally is an XP bar, set boxes are inventory slots, and hitting three sets
 at the ceiling raises the level-up dialog with the Strength jingle. The
 Quest tab (Couch to 5K as the Agility skill) uses the same skin.
 
+**Music.** The Player tab has the game's music tab: 18 OSRS tracks
+(Scape Main, Sea Shanty 2, Harmony, Newbie Melody, Adventure and friends)
+bundled as AAC, playing through the list or looping one, with lock-screen
+controls and playback that survives the screen locking. "Fanfare" plays on
+a completed quest session.
+
+**Character design.** Player > Character design is the Tutorial Island
+screen: body type, head, jaw, torso, arms, hands, legs, feet, and colours
+for hair, torso, legs, feet and skin, drawn as a 20 x 32 pixel figure with
+the low-poly shading. The choice is stored under `avatar` in the JSON.
+
 Third-party assets, all for personal use:
 
 - Fonts `runescape.ttf`, `runescape_bold.ttf`, `runescape_small.ttf` from
   [RuneLite](https://github.com/runelite/runelite) (BSD-2-Clause).
-- Skill icons and the level-up jingles from the
+- Music tracks (`Resources/Music/*.m4a`), skill icons and the level-up
+  jingles from the
   [OSRS Wiki](https://oldschool.runescape.wiki) (CC BY-NC-SA 3.0; the
   underlying art and audio are Jagex's).
 - Stone and parchment tiles are generated noise, drawn here.
@@ -113,6 +125,9 @@ whose content changed.
      "repMin": 10, "repMax": 15, "loadStep": 2.5,
      "ladder": ["incline pushups", "pushups", "chest press"]}
   ],
+  "avatar": {"name": "Player", "female": false, "head": 1, "jaw": 0, "torso": 0,
+             "arms": 0, "hands": 0, "legs": 0, "feet": 0, "hairColor": 0,
+             "torsoColor": 1, "legsColor": 2, "feetColor": 0, "skinColor": 0},
   "weeks": [
     {
       "weekOf": "2026-09-20",

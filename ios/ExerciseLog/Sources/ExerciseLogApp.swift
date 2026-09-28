@@ -7,6 +7,7 @@ struct ExerciseLogApp: App {
     @StateObject private var store = LogStore()
     @StateObject private var timer = RestTimer()
     @StateObject private var quest = QuestTimer()
+    @StateObject private var music = MusicPlayer()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -15,9 +16,10 @@ struct ExerciseLogApp: App {
                 .environmentObject(store)
                 .environmentObject(timer)
                 .environmentObject(quest)
+                .environmentObject(music)
                 .tint(RS.yellow)
                 .preferredColorScheme(.dark)
-                .onAppear { store.sync() }
+                .onAppear { store.sync(); music.resumeIfWanted() }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { store.sync() }
