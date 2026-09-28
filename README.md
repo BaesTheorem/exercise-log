@@ -7,7 +7,7 @@ notification so it works with the phone locked.
 
 The whole log is one JSON file. Pick a folder in iCloud Drive or Google Drive
 once and the app keeps `exercise-log.json` there, which puts the same file on
-the Mac for scripts to read. `bin/exercise-log` is that reader.
+the Mac for scripts to read. `bin/ironman` is that reader.
 
 ## The sheet it copies
 
@@ -97,7 +97,7 @@ Logs live under `skills` in the JSON:
 }
 ```
 
-`bin/exercise-log skills` prints every level and XP.
+`bin/ironman skills` prints every level and XP.
 
 ## Build and install
 
@@ -137,13 +137,13 @@ picked up on the next launch.
 ## Reading it on the Mac
 
 ```bash
-bin/exercise-log status            # file location, last update, this week's table
-bin/exercise-log week 2026-09-20   # one week
-bin/exercise-log weeks -n 12       # sets done vs target per week
-bin/exercise-log markdown          # this week as a markdown table
-bin/exercise-log vault             # one Obsidian note per logged week
-bin/exercise-log skills            # levels and xp per skill
-bin/exercise-log json              # the raw file
+bin/ironman status            # file location, last update, this week's table
+bin/ironman week 2026-09-20   # one week
+bin/ironman weeks -n 12       # sets done vs target per week
+bin/ironman markdown          # this week as a markdown table
+bin/ironman vault             # one Obsidian note per logged week
+bin/ironman skills            # levels and xp per skill
+bin/ironman json              # the raw file
 ```
 
 The file is found at `--file`, then `$EXERCISE_LOG_JSON`, then
@@ -229,8 +229,8 @@ rules are in `lib/quest.py` and mirrored in
 `tests/test_quest.py` covers them (`uv run --with pytest pytest`).
 
 ```bash
-bin/exercise-log quest          # level, xp, next session, recent attempts
-bin/exercise-log quest --line   # one line for a briefing
+bin/ironman quest          # level, xp, next session, recent attempts
+bin/ironman quest --line   # one line for a briefing
 bin/quest-verify --dry-run      # what would match, written nowhere
 ```
 

@@ -49,7 +49,7 @@ struct SettingsView: View {
 
                     panel("About") {
                         line("Version", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
-                        Text("A digital copy of the paper exercise log: one page per week, three days, reps per set, weekly set targets and rest per exercise. Skinned after Old School RuneScape; fonts from RuneLite, icons from the OSRS Wiki.")
+                        Text("Ironman: an Old School RuneScape skills panel for real life. Strength is the paper exercise log, Agility the running quest, Hitpoints your sleep and meals, and Firemaking, Crafting and Cooking are what you make. Fonts from RuneLite, icons and music from the OSRS Wiki.")
                             .rsSmall(16, color: RS.grey)
                     }
                 }

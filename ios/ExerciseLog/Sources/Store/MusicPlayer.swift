@@ -132,7 +132,7 @@ final class MusicPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: t.title,
             MPMediaItemPropertyArtist: "Old School RuneScape",
-            MPMediaItemPropertyAlbumTitle: "Exercise Log",
+            MPMediaItemPropertyAlbumTitle: "Ironman",
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
         if let p = player {

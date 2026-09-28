@@ -31,7 +31,10 @@ struct PlayerView: View {
                 .padding(8)
                 .parchmentPanel()
             VStack(alignment: .leading, spacing: 6) {
-                Text(store.avatar.name).rsText(24, bold: true, color: RS.orange)
+                HStack(spacing: 6) {
+                    SkillIcon(name: "Ironman_helm", size: 22)
+                    Text(store.avatar.name).rsText(24, bold: true, color: RS.orange)
+                }
                 Text("Total level \(Skills.totalLevel(store.file))").rsText(16, color: RS.white)
                 Text("Total sets \(totalSets)").rsText(16, color: RS.white)
                 Button("Character design") { showDesign = true }
