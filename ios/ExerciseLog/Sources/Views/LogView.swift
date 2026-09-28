@@ -6,7 +6,6 @@ struct LogView: View {
     @EnvironmentObject private var timer: RestTimer
     @State private var weekOf = LogDates.weekOf()
     @State private var day = 1
-    @State private var showSettings = false
     @State private var showEditor = false
     @State private var showNotes = false
     @State private var showDatePicker = false
@@ -16,7 +15,6 @@ struct LogView: View {
     private var week: Week? { store.week(weekOf) }
 
     var body: some View {
-        NavigationStack {
             VStack(spacing: 0) {
                 header
                 ScrollView {
@@ -34,19 +32,12 @@ struct LogView: View {
             .navigationTitle("Strength")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showEditor = true } label: { Text("Skills").rsText(18) }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showSettings = true } label: {
-                        Text(store.syncError == nil ? "Options" : "Options!").rsText(18, color: store.syncError == nil ? RS.yellow : RS.red)
-                    }
+                    Button { showEditor = true } label: { Text("Exercises").rsText(18) }
                 }
             }
-            .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showEditor) { ExerciseEditor() }
             .onAppear { day = store.suggestedDay(weekOf: weekOf) }
-        }
     }
 
     private func go(_ delta: Int) {
@@ -161,7 +152,7 @@ struct LogView: View {
             if let last = store.lastSync {
                 Text("Synced \(last.formatted(date: .omitted, time: .shortened))").rsSmall(16, color: RS.grey)
             } else if !CloudFolderSync.isConfigured {
-                Text("Not syncing. Pick a folder in Options so MIST can read this.").rsSmall(16, color: RS.cyan)
+                Text("Not syncing. Pick a folder in Options (Skills tab) so MIST can read this.").rsSmall(16, color: RS.cyan)
             }
             if let err = store.syncError {
                 Text(err).rsSmall(16, color: RS.red)

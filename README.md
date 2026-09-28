@@ -37,7 +37,7 @@ panels with the wiki's skill icons (push and arm work under Strength,
 pulls under Attack, legs under Agility, trunk under Hitpoints), the weekly
 tally is an XP bar, set boxes are inventory slots, and hitting three sets
 at the ceiling raises the level-up dialog with the Strength jingle. The
-Quest tab (Couch to 5K as the Agility skill) uses the same skin.
+Agility skill (Couch to 5K) uses the same skin.
 
 **Music.** The Player tab has the game's music tab: 18 OSRS tracks
 (Scape Main, Sea Shanty 2, Harmony, Newbie Melody, Adventure and friends)
@@ -62,7 +62,8 @@ Third-party assets, all for personal use:
 
 ## Skills
 
-Six skills on the OSRS experience table (level L needs
+Two tabs: Skills and Player. Every log lives under its skill; tap a
+tile to open it. Six skills on the OSRS experience table (level L needs
 floor(sum over x < L of floor(x + 300·2^(x/7)) / 4); level 2 is 83 xp,
 level 99 is 13,034,431). XP is derived from the logs on every read and
 never stored, so the phone and the Mac can both rewrite the file.
@@ -202,7 +203,7 @@ whose content changed.
 
 ## The running quest
 
-The Quest tab is Couch to 5K as a game: nine chapters of three sessions,
+The Agility skill is Couch to 5K as a game: nine chapters of three sessions,
 from eight 60-second jogs to thirty minutes continuous, each session
 bracketed by a five-minute walk. Finishing sessions raises an Agility level
 on the OSRS experience table; the full plan, verified, lands near level 50.

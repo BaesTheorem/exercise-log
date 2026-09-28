@@ -4,8 +4,8 @@ import SwiftUI
 /// and Agility open their own tabs; the rest push a log screen.
 struct SkillsView: View {
     @EnvironmentObject private var store: LogStore
-    @AppStorage("tab") private var tab = "skills"
     @State private var path: [Skill] = []
+    @State private var showSettings = false
 
     private let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
 
@@ -15,13 +15,7 @@ struct SkillsView: View {
                 VStack(spacing: 8) {
                     LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(Skill.allCases) { skill in
-                            Button {
-                                switch skill {
-                                case .strength: tab = "strength"
-                                case .agility: tab = "quest"
-                                default: path = [skill]
-                                }
-                            } label: { SkillTile(skill: skill) }
+                            Button { path = [skill] } label: { SkillTile(skill: skill) }
                             .buttonStyle(.plain)
                         }
                     }
@@ -42,8 +36,21 @@ struct SkillsView: View {
             .navigationTitle("Skills")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Skill.self) { skill in
-                if skill == .hitpoints { HitpointsView() } else { SkillLogView(skill: skill) }
+                switch skill {
+                case .strength: LogView()
+                case .agility: QuestView()
+                case .hitpoints: HitpointsView()
+                default: SkillLogView(skill: skill)
+                }
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSettings = true } label: {
+                        Text(store.syncError == nil ? "Options" : "Options!").rsText(18, color: store.syncError == nil ? RS.yellow : RS.red)
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) { SettingsView() }
             // `simctl launch ... -tab skills -skill hitpoints` for screenshots.
             .onAppear {
                 let args = CommandLine.arguments

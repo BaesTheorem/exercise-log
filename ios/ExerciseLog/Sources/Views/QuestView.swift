@@ -11,7 +11,6 @@ struct QuestView: View {
     private var quest: QuestState { store.quest }
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     levelHeader
@@ -21,7 +20,7 @@ struct QuestView: View {
                 }
             }
             .background(RS.darkImage().ignoresSafeArea())
-            .navigationTitle("Quest")
+            .navigationTitle("Agility")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 store.closeStaleQuestSessions()
@@ -41,7 +40,6 @@ struct QuestView: View {
                     Text("Week \(p.week), day \(p.day) is already done. A repeat still earns XP.")
                 }
             }
-        }
     }
 
     private func start(_ plan: PlanSession) {
