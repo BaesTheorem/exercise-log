@@ -74,14 +74,15 @@ never stored, so the phone and the Mac can both rewrite the file.
 |---|---|
 | Strength | The exercise log: 10 + reps per set, 100 per exercise per week whose target is met. |
 | Agility | The running quest, as before. |
-| Hitpoints | Starts at level 10 (1154 xp). Sleep-goal nights: 60 xp for night one, +20 per consecutive night, capped at 200; a miss resets the run, not the XP. Healthy meals 40 each (logged under Hitpoints or as a healthy Cooking dish). Plus a third of all Strength and Agility XP, the game's combat rule. |
+| Hitpoints | Starts at level 10 (1154 xp). Sleep-goal nights: 60 xp for night one, +20 per consecutive night, capped at 200; a miss resets the run, not the XP. Daily steps from Fitbit: 1 xp per 100 steps, and every step past 10,000 counts double (15,000 steps is 200 xp). Healthy meals 40 each (logged under Hitpoints or as a healthy Cooking dish). Plus a third of all Strength and Agility XP, the game's combat rule. |
 | Firemaking | Candle or stove 10, fireplace 40, campfire 90, bonfire 135, no lighter 202, in the rain 304. |
 | Crafting | Small thing 50, real project 200, ambitious 600, masterwork 1500. |
 | Cooking | Simple 30, everyday 70, involved 120, exotic 210, feast 300. |
 
-Sleep nights come from Fitbit: `bin/hitpoints-verify` reads the sleep goal
-and the last 14 nights and writes them as verified nights over anything
-claimed in the app. The harness's quest watcher runs it every half hour.
+Sleep nights and steps come from Fitbit: `bin/hitpoints-verify` reads the
+sleep goal, the last 14 nights and the daily step series, and writes them
+into `skills.nights` and `skills.steps` (nights over anything claimed in
+the app; zero-step days skipped). The harness's quest watcher runs it every half hour.
 A level gained on either side raises the level-up banner with that
 skill's jingle the next time the app is in front.
 
@@ -90,6 +91,7 @@ Logs live under `skills` in the JSON:
 ```json
 "skills": {
   "nights": [{"date": "2026-09-27", "minutes": 470, "goalMet": true, "verified": true}],
+  "steps":  [{"date": "2026-09-27", "steps": 11240}],
   "meals":  [{"id": "…", "date": "2026-09-27", "note": "Lentil curry", "loggedAt": "…"}],
   "fires":  [{"id": "…", "date": "2026-09-26", "kind": "campfire", "note": "", "loggedAt": "…"}],
   "crafts": [{"id": "…", "date": "2026-09-25", "name": "Map", "tier": "ambitious", "note": "", "loggedAt": "…"}],

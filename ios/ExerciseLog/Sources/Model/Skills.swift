@@ -14,7 +14,7 @@ enum Skill: String, CaseIterable, Codable, Identifiable {
 
     var blurb: String {
         switch self {
-        case .hitpoints: return "Nights you hit your sleep goal (consecutive nights are worth more), healthy meals, and a third of all Strength and Agility XP."
+        case .hitpoints: return "Sleep-goal nights (consecutive nights are worth more), daily steps (double past 10k), healthy meals, and a third of all Strength and Agility XP."
         case .strength: return "The exercise log. Every set is 10 XP plus the reps; hitting an exercise's weekly target is 100 more."
         case .agility: return "The running quest. Couch to 5K, verified against Fitbit."
         case .firemaking: return "Fires you made. Fancier fires burn for more XP."
@@ -33,6 +33,13 @@ struct SleepNight: Codable, Equatable, Identifiable {
     var goalMet: Bool
     /// True when the Mac wrote it from Fitbit; false for a night you claimed.
     var verified: Bool
+    var id: String { date }
+}
+
+/// A day's step count from Fitbit. Only the Mac writes these.
+struct StepDay: Codable, Equatable, Identifiable {
+    var date: String
+    var steps: Int
     var id: String { date }
 }
 
@@ -141,18 +148,20 @@ struct CookEntry: Codable, Equatable, Identifiable {
 
 struct SkillsState: Codable, Equatable {
     var nights: [SleepNight] = []
+    var steps: [StepDay] = []
     var meals: [MealEntry] = []
     var fires: [FireEntry] = []
     var crafts: [CraftEntry] = []
     var cooks: [CookEntry] = []
 
-    enum CodingKeys: String, CodingKey { case nights, meals, fires, crafts, cooks }
+    enum CodingKeys: String, CodingKey { case nights, steps, meals, fires, crafts, cooks }
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         nights = try c.decodeIfPresent([SleepNight].self, forKey: .nights) ?? []
+        steps = try c.decodeIfPresent([StepDay].self, forKey: .steps) ?? []
         meals = try c.decodeIfPresent([MealEntry].self, forKey: .meals) ?? []
         fires = try c.decodeIfPresent([FireEntry].self, forKey: .fires) ?? []
         crafts = try c.decodeIfPresent([CraftEntry].self, forKey: .crafts) ?? []
@@ -172,6 +181,18 @@ enum Skills {
     static let sleepMaxXP = 200
     static let mealXP = 40
     static let combatShare = 3
+    /// One XP per this many steps; past the threshold each step counts double.
+    static let stepsPerXP = 100
+    static let stepBonusAt = 10_000
+    static let stepBonusMultiplier = 2
+
+    static func stepsXP(_ day: StepDay) -> Int {
+        let base = min(day.steps, stepBonusAt) / stepsPerXP
+        let bonus = max(0, day.steps - stepBonusAt) / stepsPerXP * stepBonusMultiplier
+        return base + bonus
+    }
+
+    static func stepsXP(_ days: [StepDay]) -> Int { days.reduce(0) { $0 + stepsXP($1) } }
 
     static func strengthXP(_ f: LogFile) -> Int {
         var total = 0
@@ -226,7 +247,7 @@ enum Skills {
         let s = f.skills
         let meals = s.meals.count * mealXP + s.cooks.filter { $0.healthy }.count * mealXP
         let combat = (strengthXP(f) + f.quest.xp) / combatShare
-        return hitpointsBaseXP + sleepXP(s.nights) + meals + combat
+        return hitpointsBaseXP + sleepXP(s.nights) + stepsXP(s.steps) + meals + combat
     }
 
     static func xp(_ skill: Skill, _ f: LogFile) -> Int {

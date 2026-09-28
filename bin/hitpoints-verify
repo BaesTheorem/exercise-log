@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Write Fitbit's sleep nights into the log as verified Hitpoints nights.
+"""Write Fitbit's sleep nights and daily steps into the log for Hitpoints.
 
 Pulls the sleep goal and the last N nights from Fitbit, marks each night
-goal-met or not, and merges them over any night the phone claimed. Emits a
-``level_up`` event when Hitpoints crosses a level. Idempotent.
+goal-met or not, and merges them over any night the phone claimed; pulls
+the daily step series and merges it too. Emits a ``level_up`` event when
+Hitpoints crosses a level. Idempotent.
 
     hitpoints-verify                # last 14 nights, print what changed
     hitpoints-verify --json         # events as JSON (for the watcher)
@@ -31,6 +32,7 @@ import skills as sk
 
 DEFAULT_TOKEN = Path.home() / "Documents/Exobrain harness/fitbit-mcp/.fitbit-token.json"
 API = "https://api.fitbit.com/1.2/user/-"
+API_V1 = "https://api.fitbit.com/1/user/-"
 DEFAULT_GOAL_MINUTES = 450
 
 
@@ -45,8 +47,8 @@ def load_token(path: Path) -> str:
     return token
 
 
-def get(token: str, path: str) -> dict:
-    req = urllib.request.Request(f"{API}{path}", headers={"Authorization": f"Bearer {token}"})
+def get(token: str, path: str, base: str = API) -> dict:
+    req = urllib.request.Request(f"{base}{path}", headers={"Authorization": f"Bearer {token}"})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             return json.load(resp)
@@ -73,6 +75,13 @@ def nights(token: str, days: int, goal: int) -> list[dict]:
             continue
         by_date[s["dateOfSleep"]] = max(by_date.get(s["dateOfSleep"], 0), int(s.get("minutesAsleep", 0)))
     return [{"date": d, "minutes": m, "goalMet": m >= goal} for d, m in sorted(by_date.items())]
+
+
+def step_days(token: str, days: int) -> list[dict]:
+    end = datetime.now(timezone.utc).astimezone().date()
+    start = end - timedelta(days=days)
+    data = get(token, f"/activities/steps/date/{start:%Y-%m-%d}/{end:%Y-%m-%d}.json", base=API_V1)
+    return [{"date": r["dateTime"], "steps": int(r["value"])} for r in data.get("activities-steps", [])]
 
 
 def locate(explicit: str | None) -> Path:
@@ -112,6 +121,8 @@ def main() -> None:
     before_level = sk.levels(data)["hitpoints"]
     before = json.dumps(data, sort_keys=True)
     data, events = sk.merge_nights(data, verified)
+    data, step_events = sk.merge_steps(data, step_days(token, args.days))
+    events += step_events
     after_level = sk.levels(data)["hitpoints"]
     if after_level > before_level:
         events.append({"type": "level_up", "skill": "hitpoints", "from": before_level, "to": after_level, "xp": sk.xp("hitpoints", data)})
@@ -122,14 +133,16 @@ def main() -> None:
         tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
         tmp.replace(path)
 
+    steps_today = next((d["steps"] for d in data.get("skills", {}).get("steps", [])
+                        if d["date"] == datetime.now(timezone.utc).astimezone().date().isoformat()), 0)
     summary = {"goalMinutes": goal, "run": sk.current_sleep_run(data.get("skills", {}).get("nights", [])),
-               "level": after_level, "xp": sk.xp("hitpoints", data)}
+               "stepsToday": steps_today, "level": after_level, "xp": sk.xp("hitpoints", data)}
     if args.json:
         print(json.dumps({"events": events, "changed": changed, "dryRun": args.dry_run, "file": str(path), "summary": summary}))
         return
     for ev in events:
         print(json.dumps(ev))
-    print(f"goal {goal} min, run {summary['run']}, Hitpoints {summary['level']} ({summary['xp']:,} xp), "
+    print(f"goal {goal} min, run {summary['run']}, {summary['stepsToday']:,} steps today, Hitpoints {summary['level']} ({summary['xp']:,} xp), "
           f"{'written' if changed and not args.dry_run else 'no change'}")
 
 

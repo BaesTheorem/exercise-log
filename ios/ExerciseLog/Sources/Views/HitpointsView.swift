@@ -15,6 +15,7 @@ struct HitpointsView: View {
             VStack(spacing: 8) {
                 SkillHeader(skill: .hitpoints)
                 sleepPanel
+                stepsPanel
                 mealsPanel
                 breakdown
             }
@@ -63,6 +64,37 @@ struct HitpointsView: View {
         .stonePanel()
     }
 
+    private var stepsPanel: some View {
+        let days = lastDays(14)
+        let byDate = Dictionary(uniqueKeysWithValues: store.skills.steps.map { ($0.date, $0) })
+        let best = max(Skills.stepBonusAt, byDate.values.map(\.steps).max() ?? 0)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Steps").rsText(20, bold: true, color: RS.orange)
+                Spacer()
+                if let t = byDate[today] { Text("\(t.steps.formatted()) today").rsText(16, color: t.steps >= Skills.stepBonusAt ? RS.green : RS.white) }
+            }
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(days, id: \.self) { d in
+                    let steps = byDate[d]?.steps ?? 0
+                    VStack(spacing: 2) {
+                        Rectangle()
+                            .fill(steps >= Skills.stepBonusAt ? RS.green : steps > 0 ? RS.yellow : RS.stoneDarker)
+                            .frame(height: max(3, 40 * CGFloat(steps) / CGFloat(best)))
+                            .frame(maxHeight: 40, alignment: .bottom)
+                        Text(String(d.suffix(2))).rsSmall(16, color: RS.grey)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: 58, alignment: .bottom)
+            Text("1 xp per \(Skills.stepsPerXP) steps from Fitbit. Past \(Skills.stepBonusAt.formatted()) every step counts \(Skills.stepBonusMultiplier)x: 15,000 steps is \(Skills.stepsXP(StepDay(date: "", steps: 15_000))) xp.")
+                .rsSmall(16, color: RS.grey)
+        }
+        .padding(10)
+        .stonePanel()
+    }
+
     private var mealsPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -97,6 +129,7 @@ struct HitpointsView: View {
             Text("Where it comes from").rsText(18, bold: true, color: RS.orange)
             line("Base (level 10)", Skills.hitpointsBaseXP)
             line("Sleep", Skills.sleepXP(nights))
+            line("Steps", Skills.stepsXP(f.skills.steps))
             line("Healthy meals", meals)
             line("Strength and Agility, a third", combat)
         }

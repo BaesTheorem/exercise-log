@@ -71,8 +71,9 @@ struct SkillTile: View {
             HStack(spacing: 8) {
                 SkillIcon(name: skill.icon, size: 26)
                 Text(skill.title).rsText(16, color: RS.orange)
-                Spacer()
-                Text("\(level)").rsText(24, bold: true)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Spacer(minLength: 4)
+                Text("\(level)").rsText(24, bold: true).fixedSize()
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {

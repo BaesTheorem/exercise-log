@@ -26,6 +26,9 @@ SLEEP_STEP_XP = 20
 SLEEP_MAX_XP = 200
 MEAL_XP = 40
 COMBAT_SHARE = 3
+STEPS_PER_XP = 100
+STEP_BONUS_AT = 10_000
+STEP_BONUS_MULTIPLIER = 2
 
 FIRE_XP = {"candle": 10, "fireplace": 40, "campfire": 90, "bonfire": 135, "noLighter": 202, "rain": 304}
 CRAFT_XP = {"trinket": 50, "project": 200, "ambitious": 600, "masterwork": 1500}
@@ -78,11 +81,21 @@ def current_sleep_run(nights: list[dict]) -> int:
     return run
 
 
+def steps_xp_day(steps: int) -> int:
+    base = min(steps, STEP_BONUS_AT) // STEPS_PER_XP
+    bonus = max(0, steps - STEP_BONUS_AT) // STEPS_PER_XP * STEP_BONUS_MULTIPLIER
+    return base + bonus
+
+
+def steps_xp(days: list[dict]) -> int:
+    return sum(steps_xp_day(int(d.get("steps", 0))) for d in days)
+
+
 def hitpoints_xp(data: dict) -> int:
     s = data.get("skills", {})
     meals = len(s.get("meals", [])) * MEAL_XP + sum(MEAL_XP for c in s.get("cooks", []) if c.get("healthy"))
     combat = (strength_xp(data) + q.total_xp(data.get("quest", {}))) // COMBAT_SHARE
-    return HITPOINTS_BASE_XP + sleep_xp(s.get("nights", [])) + meals + combat
+    return HITPOINTS_BASE_XP + sleep_xp(s.get("nights", [])) + steps_xp(s.get("steps", [])) + meals + combat
 
 
 def xp(skill: str, data: dict) -> int:
@@ -108,6 +121,27 @@ def levels(data: dict) -> dict[str, int]:
 
 def total_level(data: dict) -> int:
     return sum(levels(data).values())
+
+
+def merge_steps(data: dict, days: list[dict]) -> tuple[dict, list[dict]]:
+    """Write Fitbit step counts per date. Zero-step days are skipped (band off
+    or not synced), and a later, larger count for the same date replaces an
+    earlier partial one. Returns the data and one event per changed day."""
+    skills = data.setdefault("skills", {})
+    have = {d["date"]: d for d in skills.get("steps", [])}
+    events = []
+    for d in days:
+        steps = int(d.get("steps", 0))
+        if steps <= 0:
+            continue
+        new = {"date": d["date"], "steps": steps}
+        if have.get(d["date"]) == new:
+            continue
+        events.append({"type": "steps", "date": d["date"], "steps": steps, "xp": steps_xp_day(steps),
+                       "was": (have.get(d["date"]) or {}).get("steps", 0)})
+        have[d["date"]] = new
+    skills["steps"] = [have[k] for k in sorted(have)]
+    return data, events
 
 
 def merge_nights(data: dict, verified: list[dict]) -> tuple[dict, list[dict]]:

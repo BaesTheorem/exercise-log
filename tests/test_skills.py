@@ -58,3 +58,20 @@ def test_merge_nights_idempotent_and_keeps_verified():
     assert out["skills"]["nights"][0] == {"date": "2026-09-01", "minutes": 300, "goalMet": False, "verified": True}
     again, events2 = sk.merge_nights(copy.deepcopy(out), verified)
     assert again == out and events2 == []
+
+
+def test_steps_double_past_ten_thousand():
+    assert sk.steps_xp_day(4_000) == 40
+    assert sk.steps_xp_day(10_000) == 100
+    assert sk.steps_xp_day(15_000) == 200
+    assert sk.steps_xp([{"steps": 10_000}, {"steps": 15_000}]) == 300
+
+
+def test_merge_steps_skips_zero_and_is_idempotent():
+    data = {"skills": {"steps": [{"date": "2026-09-01", "steps": 3000}]}}
+    days = [{"date": "2026-09-01", "steps": 8000}, {"date": "2026-09-02", "steps": 0}, {"date": "2026-09-03", "steps": 12000}]
+    out, events = sk.merge_steps(copy.deepcopy(data), days)
+    assert [e["date"] for e in events] == ["2026-09-01", "2026-09-03"] and events[0]["was"] == 3000
+    assert [d["date"] for d in out["skills"]["steps"]] == ["2026-09-01", "2026-09-03"]
+    again, events2 = sk.merge_steps(copy.deepcopy(out), days)
+    assert again == out and events2 == []
