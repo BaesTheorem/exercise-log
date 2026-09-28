@@ -20,8 +20,10 @@ struct LogFile: Codable, Equatable {
     var quest: QuestState = QuestState()
     /// The player's look from the Character Design screen.
     var avatar: Avatar = Avatar()
+    /// Hitpoints, Firemaking, Crafting and Cooking logs. See Skills.swift.
+    var skills: SkillsState = SkillsState()
 
-    enum CodingKeys: String, CodingKey { case app, schemaVersion, updatedAt, exercises, weeks, quest, avatar }
+    enum CodingKeys: String, CodingKey { case app, schemaVersion, updatedAt, exercises, weeks, quest, avatar, skills }
 
     init() {}
 
@@ -35,6 +37,7 @@ struct LogFile: Codable, Equatable {
         weeks = try c.decodeIfPresent([Week].self, forKey: .weeks) ?? []
         quest = try c.decodeIfPresent(QuestState.self, forKey: .quest) ?? QuestState()
         avatar = try c.decodeIfPresent(Avatar.self, forKey: .avatar) ?? Avatar()
+        skills = try c.decodeIfPresent(SkillsState.self, forKey: .skills) ?? SkillsState()
     }
 
     // MARK: - Lookup

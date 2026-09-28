@@ -32,7 +32,7 @@ struct PlayerView: View {
                 .parchmentPanel()
             VStack(alignment: .leading, spacing: 6) {
                 Text(store.avatar.name).rsText(24, bold: true, color: RS.orange)
-                Text("Agility \(store.quest.level)").rsText(16, color: RS.white)
+                Text("Total level \(Skills.totalLevel(store.file))").rsText(16, color: RS.white)
                 Text("Total sets \(totalSets)").rsText(16, color: RS.white)
                 Button("Character design") { showDesign = true }
                     .buttonStyle(StoneButton())
@@ -91,10 +91,18 @@ struct PlayerView: View {
     private var stats: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Adventure log").rsText(20, bold: true, color: RS.orange)
+            ForEach(Skill.allCases) { sk in
+                HStack(spacing: 6) {
+                    SkillIcon(name: sk.icon, size: 18)
+                    Text(sk.title).rsText(16, color: RS.orange)
+                    Spacer()
+                    Text("\(Skills.level(sk, store.file))").rsText(16, color: RS.white).monospacedDigit()
+                    Text("\(Skills.xp(sk, store.file).formatted()) xp").rsSmall(16, color: RS.grey).monospacedDigit()
+                }
+            }
             line("Weeks trained", "\(store.file.weeks.filter { $0.hasAnySets }.count)")
             line("Sets logged", "\(totalSets)")
             line("Quests done", "\(store.quest.sessions.filter { $0.completed }.count)")
-            line("Agility xp", store.quest.xp.formatted())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)

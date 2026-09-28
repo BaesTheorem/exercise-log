@@ -31,7 +31,7 @@ struct LogView: View {
                 TimerBar()
             }
             .background(RS.darkImage().ignoresSafeArea())
-            .navigationTitle("Exercise Log")
+            .navigationTitle("Strength")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -56,6 +56,7 @@ struct LogView: View {
 
     private var header: some View {
         VStack(spacing: 6) {
+            strengthLine
             HStack {
                 Button("<") { go(-1) }.buttonStyle(StoneButton())
                 Spacer()
@@ -122,6 +123,25 @@ struct LogView: View {
             .background(RS.stoneImage().ignoresSafeArea())
             .presentationDetents([.medium, .large])
             .presentationCornerRadius(0)
+        }
+    }
+
+    private var strengthLine: some View {
+        let xp = Skills.strengthXP(store.file)
+        let level = Quest.level(forXP: xp)
+        return HStack(spacing: 8) {
+            SkillIcon(name: "Strength_icon", size: 22)
+            Text("Strength").rsText(16, color: RS.orange)
+            Text("\(level)").rsText(22, bold: true)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle().fill(RS.stoneDarker)
+                    Rectangle().fill(RS.green).frame(width: geo.size.width * Quest.levelProgress(xp: xp))
+                }
+            }
+            .frame(height: 6)
+            .bevel(inset: true)
+            Text("\(xp.formatted()) xp").rsSmall(16, color: RS.grey)
         }
     }
 

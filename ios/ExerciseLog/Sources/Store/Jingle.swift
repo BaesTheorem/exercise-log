@@ -5,12 +5,13 @@ import AVFoundation
 enum Jingle {
     private static var player: AVAudioPlayer?
 
-    static func levelUp() { play("level_up") }
-    static func questLevelUp() { play("quest_level_up") }
+    static func levelUp() { play(Skill.strength.jingle) }
+    static func questLevelUp() { play(Skill.agility.jingle) }
+    static func levelUp(_ skill: Skill) { play(skill.jingle) }
     /// The game's quest-complete fanfare, from the Music folder.
     static func fanfare() { play("Fanfare") }
 
-    private static func play(_ name: String) {
+    static func play(_ name: String) {
         guard let url = Bundle.main.url(forResource: name, withExtension: "m4a") else { return }
         // Playback, not ambient: ambient would silence the music player
         // the moment the screen locks, since the category is app-wide.

@@ -158,12 +158,30 @@ def cmd_status(data: dict, path: Path) -> None:
     av = data.get("avatar")
     if av:
         print(f"player:    {av.get('name', 'Player')} ({'female' if av.get('female') else 'male'} build)")
+    if sk:
+        lv = sk.levels(data)
+        print("skills:    " + ", ".join(f"{s} {lv[s]}" for s in sk.SKILLS) + f" (total {sum(lv.values())})")
     week = find_week(data, None)
     if week:
         print(f"\nWeek of {week['weekOf']}")
         print(week_table(data, week, markdown=False))
         if week.get("notes"):
             print(f"\nnotes: {week['notes']}")
+
+
+def cmd_skills(data: dict) -> None:
+    if not sk:
+        sys.exit("lib/skills.py missing")
+    lv = sk.levels(data)
+    for s in sk.SKILLS:
+        x = sk.xp(s, data)
+        nxt = sk.q.xp_for_level(lv[s] + 1) - x if lv[s] < 99 else 0
+        print(f"{s:<11} {lv[s]:>3}  {x:>8,} xp  {nxt:>7,} to next")
+    print(f"{'total':<11} {sum(lv.values()):>3}")
+    nights = data.get("skills", {}).get("nights", [])
+    if nights:
+        print(f"sleep run: {sk.current_sleep_run(nights)} night(s); last night {nights[-1]['date']} "
+              f"{'met' if nights[-1].get('goalMet') else 'missed'}{'' if nights[-1].get('verified') else ' (claimed)'}")
 
 
 def cmd_weeks(data: dict, n: int) -> None:
@@ -254,6 +272,7 @@ def main() -> None:
     p = sub.add_parser("week"); p.add_argument("week_of", nargs="?")
     p = sub.add_parser("weeks"); p.add_argument("-n", type=int, default=8)
     sub.add_parser("json")
+    sub.add_parser("skills")
     p = sub.add_parser("markdown"); p.add_argument("week_of", nargs="?")
     p = sub.add_parser("vault"); p.add_argument("--dir", default=os.environ.get("EXERCISE_LOG_VAULT_DIR", str(DEFAULT_VAULT_DIR)))
     p = sub.add_parser("quest"); p.add_argument("--line", action="store_true"); p.add_argument("--json", action="store_true")
@@ -274,6 +293,8 @@ def main() -> None:
         print(week_table(data, week, markdown=(cmd == "markdown")))
     elif cmd == "weeks":
         cmd_weeks(data, args.n)
+    elif cmd == "skills":
+        cmd_skills(data)
     elif cmd == "vault":
         cmd_vault(data, Path(args.dir).expanduser())
     elif cmd == "quest":

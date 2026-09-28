@@ -60,6 +60,42 @@ Third-party assets, all for personal use:
   underlying art and audio are Jagex's).
 - Stone and parchment tiles are generated noise, drawn here.
 
+## Skills
+
+Six skills on the OSRS experience table (level L needs
+floor(sum over x < L of floor(x + 300·2^(x/7)) / 4); level 2 is 83 xp,
+level 99 is 13,034,431). XP is derived from the logs on every read and
+never stored, so the phone and the Mac can both rewrite the file.
+
+| Skill | XP from |
+|---|---|
+| Strength | The exercise log: 10 + reps per set, 100 per exercise per week whose target is met. |
+| Agility | The running quest, as before. |
+| Hitpoints | Starts at level 10 (1154 xp). Sleep-goal nights: 60 xp for night one, +20 per consecutive night, capped at 200; a miss resets the run, not the XP. Healthy meals 40 each (logged under Hitpoints or as a healthy Cooking dish). Plus a third of all Strength and Agility XP, the game's combat rule. |
+| Firemaking | Candle or stove 10, fireplace 40, campfire 90, bonfire 135, no lighter 202, in the rain 304. |
+| Crafting | Small thing 50, real project 200, ambitious 600, masterwork 1500. |
+| Cooking | Simple 30, everyday 70, involved 120, exotic 210, feast 300. |
+
+Sleep nights come from Fitbit: `bin/hitpoints-verify` reads the sleep goal
+and the last 14 nights and writes them as verified nights over anything
+claimed in the app. The harness's quest watcher runs it every half hour.
+A level gained on either side raises the level-up banner with that
+skill's jingle the next time the app is in front.
+
+Logs live under `skills` in the JSON:
+
+```json
+"skills": {
+  "nights": [{"date": "2026-09-27", "minutes": 470, "goalMet": true, "verified": true}],
+  "meals":  [{"id": "…", "date": "2026-09-27", "note": "Lentil curry", "loggedAt": "…"}],
+  "fires":  [{"id": "…", "date": "2026-09-26", "kind": "campfire", "note": "", "loggedAt": "…"}],
+  "crafts": [{"id": "…", "date": "2026-09-25", "name": "Map", "tier": "ambitious", "note": "", "loggedAt": "…"}],
+  "cooks":  [{"id": "…", "date": "2026-09-27", "dish": "Ramen", "tier": "exotic", "healthy": true, "note": "", "loggedAt": "…"}]
+}
+```
+
+`bin/exercise-log skills` prints every level and XP.
+
 ## Build and install
 
 ```bash
@@ -103,6 +139,7 @@ bin/exercise-log week 2026-09-20   # one week
 bin/exercise-log weeks -n 12       # sets done vs target per week
 bin/exercise-log markdown          # this week as a markdown table
 bin/exercise-log vault             # one Obsidian note per logged week
+bin/exercise-log skills            # levels and xp per skill
 bin/exercise-log json              # the raw file
 ```
 

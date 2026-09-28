@@ -2,12 +2,16 @@ Fonts: runescape.ttf, runescape_bold.ttf, runescape_small.ttf
   RuneLite (https://github.com/runelite/runelite), BSD-2-Clause.
 
 Icons: Strength_icon.png, Attack_icon.png, Agility_icon.png,
-  Hitpoints_icon.png, Defence_icon.png, Prayer_icon.png
+  Hitpoints_icon.png, Defence_icon.png, Prayer_icon.png,
+  Firemaking_icon.png, Crafting_icon.png, Cooking_icon.png
   OSRS Wiki (https://oldschool.runescape.wiki), CC BY-NC-SA 3.0.
   Artwork is Jagex Ltd's. Personal use only.
 
-Sounds: level_up.m4a  ("Strength Level Up! (2-49).ogg")
-        quest_level_up.m4a ("Agility Level Up!.ogg")
+Sounds: levelup_strength.m4a ("Strength Level Up! (2-49).ogg")
+        levelup_agility.m4a ("Agility Level Up!.ogg")
+        levelup_hitpoints.m4a ("Hitpoints Level Up! (2-49).ogg")
+        levelup_firemaking.m4a, levelup_crafting.m4a, levelup_cooking.m4a
+        ("<Skill> Level Up!.ogg")
   OSRS Wiki, CC BY-NC-SA 3.0. Audio is Jagex Ltd's. Personal use only.
 
 Tiles: stone_tile.png, parchment_tile.png, dark_tile.png

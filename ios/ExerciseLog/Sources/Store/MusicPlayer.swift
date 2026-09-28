@@ -31,9 +31,8 @@ final class MusicPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         super.init()
         let urls = Bundle.main.urls(forResourcesWithExtension: "m4a", subdirectory: nil) ?? []
         // Jingles live next to the music; keep only the tracks.
-        let jingles: Set<String> = ["level_up", "quest_level_up", "Fanfare"]
         tracks = urls.map { Track(file: $0.deletingPathExtension().lastPathComponent) }
-            .filter { !jingles.contains($0.file) }
+            .filter { !$0.file.hasPrefix("levelup_") && $0.file != "Fanfare" }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         loopOne = UserDefaults.standard.bool(forKey: "music-loop-one")
         autoplay = UserDefaults.standard.bool(forKey: "music-autoplay")

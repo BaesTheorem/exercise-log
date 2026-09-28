@@ -16,6 +16,8 @@ final class LogStore: ObservableObject {
     @Published private(set) var lastSync: Date?
     @Published private(set) var syncError: String?
     @Published private(set) var syncing = false
+    /// Levels gained since the last banner was dismissed, oldest first.
+    @Published var levelUps: [LevelUp] = []
 
     private var saveTask: Task<Void, Never>?
     private var pushTask: Task<Void, Never>?
@@ -43,8 +45,20 @@ final class LogStore: ObservableObject {
         body(&copy)
         guard copy != file else { return }
         copy.updatedAt = Date()
-        file = copy
+        adopt(copy)
         scheduleSave()
+    }
+
+    /// Every path that replaces the file goes through here so a level gained
+    /// on the phone or written by the Mac raises the same banner.
+    private func adopt(_ new: LogFile) {
+        let before = Skills.levels(file)
+        file = new
+        let after = Skills.levels(new)
+        for skill in Skill.allCases {
+            let a = before[skill] ?? 1, b = after[skill] ?? 1
+            if b > a { levelUps.append(LevelUp(skill: skill, level: b)) }
+        }
     }
 
     private func scheduleSave() {
@@ -98,7 +112,7 @@ final class LogStore: ObservableObject {
         do {
             if let remote = try CloudFolderSync.read() {
                 if remote.updatedAt > file.updatedAt {
-                    file = remote
+                    adopt(remote)
                     saveLocal()
                 } else if remote != file {
                     try CloudFolderSync.write(file)
@@ -134,6 +148,53 @@ final class LogStore: ObservableObject {
     /// A copy of the JSON for the share sheet.
     func exportData() -> Data? {
         try? LogJSON.encoder.encode(file)
+    }
+
+    // MARK: - Skills
+
+    var skills: SkillsState { file.skills }
+
+    /// Claim last night's sleep goal. A verified night from the Mac wins.
+    func claimSleepGoal(date: String = LogDates.dayString(Date())) {
+        mutate { f in
+            if let i = f.skills.nights.firstIndex(where: { $0.date == date }) {
+                if !f.skills.nights[i].verified { f.skills.nights[i].goalMet = true }
+            } else {
+                f.skills.nights.append(SleepNight(date: date, minutes: nil, goalMet: true, verified: false))
+            }
+            f.skills.nights.sort { $0.date < $1.date }
+        }
+    }
+
+    func unclaimSleepGoal(date: String) {
+        mutate { f in
+            f.skills.nights.removeAll { $0.date == date && !$0.verified }
+        }
+    }
+
+    func addMeal(note: String, date: String) {
+        mutate { f in f.skills.meals.append(MealEntry(id: UUID().uuidString, date: date, note: note, loggedAt: Date())) }
+    }
+
+    func addFire(kind: FireKind, note: String, date: String) {
+        mutate { f in f.skills.fires.append(FireEntry(id: UUID().uuidString, date: date, kind: kind, note: note, loggedAt: Date())) }
+    }
+
+    func addCraft(name: String, tier: CraftTier, note: String, date: String) {
+        mutate { f in f.skills.crafts.append(CraftEntry(id: UUID().uuidString, date: date, name: name, tier: tier, note: note, loggedAt: Date())) }
+    }
+
+    func addCook(dish: String, tier: CookTier, healthy: Bool, note: String, date: String) {
+        mutate { f in f.skills.cooks.append(CookEntry(id: UUID().uuidString, date: date, dish: dish, tier: tier, healthy: healthy, note: note, loggedAt: Date())) }
+    }
+
+    func deleteSkillEntry(_ id: String) {
+        mutate { f in
+            f.skills.meals.removeAll { $0.id == id }
+            f.skills.fires.removeAll { $0.id == id }
+            f.skills.crafts.removeAll { $0.id == id }
+            f.skills.cooks.removeAll { $0.id == id }
+        }
     }
 
     // MARK: - Avatar
