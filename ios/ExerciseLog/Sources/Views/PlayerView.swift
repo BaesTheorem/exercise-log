@@ -57,6 +57,8 @@ struct PlayerView: View {
                 Text(music.isPlaying ? "Now playing: \(t.title)" : "Selected: \(t.title)")
                     .rsSmall(16, color: music.isPlaying ? RS.green : RS.grey)
             }
+            Text(music.defaultTrack.map { "Default: \($0.title). Tap the star on a track to change it." } ?? "No default. Tap the star on a track to open on it every launch.")
+                .rsSmall(16, color: RS.grey)
             HStack(spacing: 8) {
                 Toggle(isOn: $music.loopOne) { Text("Loop track").rsSmall(16, color: RS.white) }
                     .tint(RS.green)
@@ -66,18 +68,30 @@ struct PlayerView: View {
             .onChange(of: music.loopOne) { _, _ in if music.isPlaying, let t = music.current { music.play(t) } }
             VStack(spacing: 0) {
                 ForEach(music.tracks) { t in
-                    Button { music.play(t) } label: {
-                        HStack {
-                            Text(t.title).rsSmall(16, color: t == music.current ? RS.white : RS.green)
-                            Spacer()
-                            if t == music.current && music.isPlaying { Text("playing").rsSmall(16, color: RS.grey) }
+                    HStack(spacing: 0) {
+                        Button { music.play(t) } label: {
+                            HStack {
+                                Text(t.title).rsSmall(16, color: t == music.current ? RS.white : RS.green)
+                                Spacer()
+                                if t == music.current && music.isPlaying { Text("playing").rsSmall(16, color: RS.grey) }
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .frame(maxWidth: .infinity)
-                        .background(t == music.current ? RS.stoneDark : Color.clear)
+                        .buttonStyle(.plain)
+                        Button { music.setDefault(t) } label: {
+                            Text(t == music.defaultTrack ? "★" : "☆")
+                                .font(.system(size: 16))
+                                .foregroundStyle(t == music.defaultTrack ? RS.yellow : RS.grey)
+                                .frame(width: 36, height: 30)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(t == music.defaultTrack ? "Default track" : "Set as default")
                     }
-                    .buttonStyle(.plain)
+                    .background(t == music.current ? RS.stoneDark : Color.clear)
                 }
             }
             .stoneSlot()

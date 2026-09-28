@@ -42,7 +42,9 @@ Agility skill (Couch to 5K) uses the same skin.
 **Music.** The Player tab has the game's music tab: 18 OSRS tracks
 (Scape Main, Sea Shanty 2, Harmony, Newbie Melody, Adventure and friends)
 bundled as AAC, playing through the list or looping one, with lock-screen
-controls and playback that survives the screen locking. "Fanfare" plays on
+controls and playback that survives the screen locking. Star a track to
+make it the default: the app opens on it and, with "Play on launch" set,
+starts it. "Fanfare" plays on
 a completed quest session.
 
 **Character design.** Player > Character design is the Tutorial Island

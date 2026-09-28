@@ -24,6 +24,8 @@ final class MusicPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var autoplay = false {
         didSet { UserDefaults.standard.set(autoplay, forKey: "music-autoplay") }
     }
+    /// The track the app opens on (and autoplays), whatever played last.
+    @Published private(set) var defaultTrack: Track?
 
     private var player: AVAudioPlayer?
 
@@ -36,7 +38,12 @@ final class MusicPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         loopOne = UserDefaults.standard.bool(forKey: "music-loop-one")
         autoplay = UserDefaults.standard.bool(forKey: "music-autoplay")
-        if let last = UserDefaults.standard.string(forKey: "music-track"), let t = tracks.first(where: { $0.file == last }) {
+        if let d = UserDefaults.standard.string(forKey: "music-default"), let t = tracks.first(where: { $0.file == d }) {
+            defaultTrack = t
+        }
+        if let d = defaultTrack {
+            current = d
+        } else if let last = UserDefaults.standard.string(forKey: "music-track"), let t = tracks.first(where: { $0.file == last }) {
             current = t
         } else {
             current = tracks.first { $0.file == "Sea_Shanty_2" } ?? tracks.first
@@ -44,9 +51,20 @@ final class MusicPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         installRemoteCommands()
     }
 
-    /// Called on launch: start the remembered track if autoplay is on.
+    /// Called on launch: start the default (else the remembered) track if
+    /// autoplay is on.
     func resumeIfWanted() {
-        if autoplay, !isPlaying, let t = current { play(t) }
+        if autoplay, !isPlaying, let t = defaultTrack ?? current { play(t) }
+    }
+
+    /// Star a track as the default; starring it again clears it.
+    func setDefault(_ track: Track?) {
+        defaultTrack = (track == defaultTrack) ? nil : track
+        if let d = defaultTrack {
+            UserDefaults.standard.set(d.file, forKey: "music-default")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "music-default")
+        }
     }
 
     func play(_ track: Track) {
